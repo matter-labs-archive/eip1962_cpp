@@ -80,7 +80,7 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
 
         // Check if remaining input size is exact
         u32 const expected_pair_len = u32(2) * u32(extension_degree) * u32(mod_byte_len) + u32(wc.order_len());
-        if (deserializer.remaining() != expected_pair_len)
+        if (deserializer.remaining() != expected_pair_len*num_pairs)
         {
             input_err("Input length is invalid for number of pairs");
         }
