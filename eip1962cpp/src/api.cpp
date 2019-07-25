@@ -158,7 +158,7 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     auto const opairing_result = engine.pair(points, extension12);
     if (!opairing_result)
     {
-        unknown_parameter_err("Pairing engine returned no value");
+        unknown_parameter_err("BN/BLS12 pairing engine returned no value");
     }
 
     // Finish
@@ -229,14 +229,14 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
     auto const opairing_result = engine.pair(points, extension_2);
     if (!opairing_result)
     {
-        unknown_parameter_err("Pairing engine returned no value");
+        unknown_parameter_err("MNT pairing engine returned no value");
     }
 
     // Finish
-    auto const one_fp4 = F2::one(extension_2);
+    auto const one_fpk = F2::one(extension_2);
     auto const pairing_result = opairing_result.value();
     std::vector<std::uint8_t> result;
-    if (pairing_result == one_fp4)
+    if (pairing_result == one_fpk)
     {
         result.push_back(1);
     }
