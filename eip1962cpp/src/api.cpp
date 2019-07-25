@@ -37,6 +37,10 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
         auto p_0 = deserialize_curve_point<F>(mod_byte_len, extension, wc, deserializer);
         auto const p_1 = deserialize_curve_point<F>(mod_byte_len, extension, wc, deserializer);
 
+        if (!deserializer.ended()) {
+            input_err("Input contains garbage at the end");  
+        }
+
         // Apply addition
         p_0.add(p_1, wc, extension);
 
@@ -51,6 +55,10 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
         // deser CurvePoint & Scalar
         auto const p_0 = deserialize_curve_point<F>(mod_byte_len, extension, wc, deserializer);
         auto const scalar = deserialize_scalar(wc, deserializer);
+
+        if (!deserializer.ended()) {
+            input_err("Input contains garbage at the end");  
+        }
 
         // Apply multiplication
         auto r = p_0.mul(scalar, wc, extension);
@@ -86,6 +94,10 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
             pairs.push_back(tuple(p, scalar));
         }
 
+        if (!deserializer.ended()) {
+            input_err("Input contains garbage at the end");  
+        }
+
         // Apply Multiexponentiation
         auto const r = peepinger(pairs, wc, extension);
 
@@ -107,6 +119,9 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 {
     // Deser Weierstrass 1 & Extension2
     auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, true);
+    if (!g1_curve.get_a().is_zero()) {
+        input_err("BN or BLS12 curves have A = 0");
+    }
     auto const extension2 = FieldExtension2(deserialize_non_residue<Fp<N>>(mod_byte_len, field, 2, deserializer), field);
 
     // Deser Extension6 & TwistType
@@ -152,6 +167,10 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     auto const points = deserialize_points<N, Fp2<N>>(mod_byte_len, extension2, g1_curve, g2_curve, deserializer);
     if (points.size() == 0) {
         input_err("No points supplied");   
+    }
+
+    if (!deserializer.ended()) {
+        input_err("Input contains garbage at the end");  
     }
     // Construct BN engine
     ENGINE const engine(u, u_is_negative, twist_type, g2_curve, e6_non_residue);
@@ -226,6 +245,11 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
     if (points.size() == 0) {
         input_err("No points supplied");   
     }
+
+    if (!deserializer.ended()) {
+        input_err("Input contains garbage at the end");  
+    }
+
     // Construct MNT engine
     ENGINE const engine(x, x_is_negative, exp_w0, exp_w1, exp_w0_is_negative, g2_curve, twist);
 
