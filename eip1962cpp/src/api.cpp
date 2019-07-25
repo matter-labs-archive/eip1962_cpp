@@ -150,7 +150,9 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 
     // deser (CurvePoint<Fp<N>>,CurvePoint<F>) pairs
     auto const points = deserialize_points<N, Fp2<N>>(mod_byte_len, extension2, g1_curve, g2_curve, deserializer);
-
+    if (points.size() == 0) {
+        input_err("No points supplied");   
+    }
     // Construct BN engine
     ENGINE const engine(u, u_is_negative, twist_type, g2_curve, e6_non_residue);
 
@@ -221,7 +223,9 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
 
     // deser (CurvePoint<Fp<N>>,CurvePoint<F>) pairs
     auto const points = deserialize_points<N, F>(mod_byte_len, extension, g1_curve, g2_curve, deserializer);
-
+    if (points.size() == 0) {
+        input_err("No points supplied");   
+    }
     // Construct MNT engine
     ENGINE const engine(x, x_is_negative, exp_w0, exp_w1, exp_w0_is_negative, g2_curve, twist);
 
