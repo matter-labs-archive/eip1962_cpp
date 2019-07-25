@@ -6,6 +6,6 @@
 #include <string>
 
 // Main API function for ABI.
-std::variant<std::vector<std::uint8_t>, std::basic_string<char>> run(std::vector<std::uint8_t> const &input);
+bool run(std::vector<std::uint8_t> const &input, std::vector<std::uint8_t> &output, std::string &err);
 
 #endif

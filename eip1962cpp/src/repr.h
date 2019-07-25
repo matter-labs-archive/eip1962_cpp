@@ -2,16 +2,18 @@
 #define H_REPR
 
 #include "common.h"
-#include "ctbignum/ctbignum.hpp"
+#include "mult.hpp"
+#include "slicing.hpp"
+//#include "..//include/ctbignum/"
+//#include "ctbignum/ctbignum.hpp"
 
 const static usize LIMB_BITS = sizeof(u64) * 8;
 
-template <usize N>
-using Repr = cbn::big_int<N>;
+template <size_t N, typename T = uint64_t>
+using Repr = std::array<T,N>;
 
 // *********************** FUNCTIONS on Repr ******************* //
-namespace cbn
-{
+
 template <usize N>
 bool is_even(Repr<N> const &repr)
 {
@@ -21,13 +23,13 @@ bool is_even(Repr<N> const &repr)
 template <usize N>
 Repr<N> mul2(Repr<N> repr)
 {
-    return cbn::detail::first<N>(cbn::shift_left(repr, 1));
+    return first<N>(shift_left(repr, 1));
 }
 
 template <usize N>
 Repr<N> div2(Repr<N> repr)
 {
-    return cbn::shift_right(repr, 1);
+    return shift_right(repr, 1);
 }
 
 template <usize N>
@@ -36,8 +38,6 @@ bool is_zero(Repr<N> const &repr)
     constexpr Repr<N> zero = {0};
     return repr == zero;
 }
-
-} // namespace cbn
 
 // *********************** FUNCTIONS on u64 ******************* //
 

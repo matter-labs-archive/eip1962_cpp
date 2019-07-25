@@ -3,19 +3,21 @@
 
 int run(const char *i, uint32_t i_len, char *o, uint32_t *o_len, char *err, uint32_t *char_len) {
     std::vector<std::uint8_t> input;
+	std::vector<std::uint8_t> output;
+	std::string err_desc;
     input.resize(i_len);
     std::copy(i, i + i_len, input.begin());
-    auto result = run(input);
-    if (auto answer = std::get_if<0>(&result))
+    bool result = run(input, output, err_desc);
+    if (result)
     {
-        std::copy(answer->begin(), answer->end(), o);
-        *o_len = answer->size();
+        std::copy(output.begin(), output.end(), o);
+        *o_len = static_cast<uint32_t>(output.size());
         return true;
-    } else if (auto error_descr = std::get_if<1>(&result)) {
-        auto str_len = error_descr->size();
-        auto c_str = error_descr->c_str();
+    } else if (err_desc.length()) {
+        auto str_len = err_desc.size();
+        auto c_str = err_desc.c_str();
         std::copy(c_str, c_str + str_len + 1, err);
-        *char_len = error_descr->size();
+        *char_len = static_cast<uint32_t>(err_desc.size());
         return false;
     }
 

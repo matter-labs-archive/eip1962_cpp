@@ -28,7 +28,7 @@ u64 adc(u64 a, u64 b, u64 &carry)
     Repr<2> ar = {a, 0};
     Repr<2> br = {b, 0};
     Repr<2> carryr = {carry, 0};
-    auto const tmp = ar + br + carryr;
+	const Repr<2> tmp = ar + br + carryr;
 
     carry = tmp[1];
 
@@ -39,10 +39,11 @@ u64 adc(u64 a, u64 b, u64 &carry)
 // and setting carry to the most significant digit.
 u64 mul_with_carry(u64 a, u64 b, u64 &carry)
 {
-    Repr<1> ar = {a};
-    Repr<1> br = {b};
-    Repr<2> carryr = {carry, 0};
-    auto const tmp = ar * br + carryr;
+	std::array<u64,1> ar = { a };
+	std::array<u64, 1> br = {b};
+	std::array<u64, 2> carryr = {carry, 0};
+	auto t = ar * br;
+    auto tmp = t + carryr;
 
     carry = tmp[1];
 

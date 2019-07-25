@@ -1,7 +1,7 @@
 #include "common.h"
 #include <cstdio>
 #include <cstdarg>
-#include <alloca.h>
+#include <malloc.h>
 
 #include <string>
 #include <iostream>
@@ -29,6 +29,7 @@ std::string stringf(const char *format, ...)
 
     // OPTION 1
     std::string result(needed, ' ');
-    vsnprintf(result.data(), needed, format, arg_list);
+	std::vector<char> res(result.c_str(), result.c_str() + result.size() + 1);
+    vsnprintf(res.data(), needed, format, arg_list);
     return result; // RVO ensures this is cheap
 }

@@ -37,10 +37,6 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
         auto p_0 = deserialize_curve_point<F>(mod_byte_len, extension, wc, deserializer);
         auto const p_1 = deserialize_curve_point<F>(mod_byte_len, extension, wc, deserializer);
 
-        if (!deserializer.ended()) {
-            input_err("Input contains garbage at the end");  
-        }
-
         // Apply addition
         p_0.add(p_1, wc, extension);
 
@@ -55,10 +51,6 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
         // deser CurvePoint & Scalar
         auto const p_0 = deserialize_curve_point<F>(mod_byte_len, extension, wc, deserializer);
         auto const scalar = deserialize_scalar(wc, deserializer);
-
-        if (!deserializer.ended()) {
-            input_err("Input contains garbage at the end");  
-        }
 
         // Apply multiplication
         auto r = p_0.mul(scalar, wc, extension);
@@ -79,8 +71,8 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
         }
 
         // Check if remaining input size is exact
-        u32 const expected_pair_len = u32(2) * u32(extension_degree) * u32(mod_byte_len) + u32(wc.order_len());
-        if (deserializer.remaining() != expected_pair_len*num_pairs)
+        u32 const expected_pair_len = 2 * extension_degree * mod_byte_len + wc.order_len();
+        if (deserializer.remaining() != expected_pair_len)
         {
             input_err("Input length is invalid for number of pairs");
         }
@@ -92,10 +84,6 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
             auto const p = deserialize_curve_point<F>(mod_byte_len, extension, wc, deserializer);
             auto const scalar = deserialize_scalar(wc, deserializer);
             pairs.push_back(tuple(p, scalar));
-        }
-
-        if (!deserializer.ended()) {
-            input_err("Input contains garbage at the end");  
         }
 
         // Apply Multiexponentiation
@@ -119,9 +107,6 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 {
     // Deser Weierstrass 1 & Extension2
     auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, true);
-    if (!g1_curve.get_a().is_zero()) {
-        input_err("BN or BLS12 curves have A = 0");
-    }
     auto const extension2 = FieldExtension2(deserialize_non_residue<Fp<N>>(mod_byte_len, field, 2, deserializer), field);
 
     // Deser Extension6 & TwistType
@@ -165,13 +150,7 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 
     // deser (CurvePoint<Fp<N>>,CurvePoint<F>) pairs
     auto const points = deserialize_points<N, Fp2<N>>(mod_byte_len, extension2, g1_curve, g2_curve, deserializer);
-    if (points.size() == 0) {
-        input_err("No points supplied");   
-    }
 
-    if (!deserializer.ended()) {
-        input_err("Input contains garbage at the end");  
-    }
     // Construct BN engine
     ENGINE const engine(u, u_is_negative, twist_type, g2_curve, e6_non_residue);
 
@@ -179,7 +158,7 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     auto const opairing_result = engine.pair(points, extension12);
     if (!opairing_result)
     {
-        unknown_parameter_err("BN/BLS12 pairing engine returned no value");
+        unknown_parameter_err("Pairing engine returned no value");
     }
 
     // Finish
@@ -242,13 +221,6 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
 
     // deser (CurvePoint<Fp<N>>,CurvePoint<F>) pairs
     auto const points = deserialize_points<N, F>(mod_byte_len, extension, g1_curve, g2_curve, deserializer);
-    if (points.size() == 0) {
-        input_err("No points supplied");   
-    }
-
-    if (!deserializer.ended()) {
-        input_err("Input contains garbage at the end");  
-    }
 
     // Construct MNT engine
     ENGINE const engine(x, x_is_negative, exp_w0, exp_w1, exp_w0_is_negative, g2_curve, twist);
@@ -257,14 +229,14 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
     auto const opairing_result = engine.pair(points, extension_2);
     if (!opairing_result)
     {
-        unknown_parameter_err("MNT pairing engine returned no value");
+        unknown_parameter_err("Pairing engine returned no value");
     }
 
     // Finish
-    auto const one_fpk = F2::one(extension_2);
+    auto const one_fp4 = F2::one(extension_2);
     auto const pairing_result = opairing_result.value();
     std::vector<std::uint8_t> result;
-    if (pairing_result == one_fpk)
+    if (pairing_result == one_fp4)
     {
         result.push_back(1);
     }
@@ -405,9 +377,9 @@ std::vector<std::uint8_t> run_limbed(u8 operation, std::optional<u8> curve_type,
 }
 
 // Main API function which receives ABI input and returns the result of operations, or description of occured error.
-std::variant<std::vector<std::uint8_t>, std::basic_string<char>>
-run(std::vector<std::uint8_t> const &input)
+bool run(std::vector<std::uint8_t> const& input, std::vector<std::uint8_t>& output, std::string& err)
 {
+	bool ret = false;
     try
     {
         // Deserialize operation
@@ -429,22 +401,23 @@ run(std::vector<std::uint8_t> const &input)
         case OPERATION_G2_ADD:
         case OPERATION_G2_MUL:
         case OPERATION_G2_MULTIEXP:
-            return run_limbed(operation, curve_type, deserializer);
-
+            output = run_limbed(operation, curve_type, deserializer);
+			ret = true;
+			break;
         default:
             input_err("Unknown operation type");
         }
     }
     catch (std::domain_error const &e)
     {
-        return e.what();
+        err = e.what();
     }
     catch (std::runtime_error const &e)
     {
-        return e.what();
+        err = e.what();
     }
     catch (std::bad_optional_access const &e) // TODO: Remove when rework the arithmetics
     {
-        return e.what();
+        err = e.what();
     }
 }

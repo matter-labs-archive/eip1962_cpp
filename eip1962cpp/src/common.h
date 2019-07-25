@@ -12,6 +12,7 @@
 #include <tuple>
 #include <string>
 #include <iostream>
+#include "optional.hpp"
 
 // **************** RUST equivalent TYPES for ease of porting, and is also shorter to write ******************** //
 using namespace std;
@@ -39,7 +40,7 @@ typedef std::size_t usize;
 
 // C++ shortcut for Rust Option
 template <class T>
-using Option = std::optional<T>;
+using Option = optional<T>;
 
 typedef const std::string str;
 
