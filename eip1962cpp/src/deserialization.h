@@ -249,6 +249,10 @@ WeierstrassCurve<F> deserialize_weierstrass_curve(u8 mod_byte_len, C const &fiel
         unknown_parameter_err("A parameter must be zero");
     }
 
+    if (b.is_zero()) {
+        input_err("curve shape is not supported");
+    }
+
     auto order_len = deserializer.byte("Input is not long enough to get group size length");
     auto order = deserializer.dyn_number(order_len, "Input is not long enough to get main group order size");
 

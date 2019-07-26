@@ -64,33 +64,53 @@ public:
         {
             return {};
         }
-        auto res = miller_loop(points, context);
+
+        auto ores = miller_loop(points, context);
+        if (!ores) {
+            return {};
+        }
+
+        auto res = ores.value();
         return final_exponentiation(res);
     }
 
 private:
     template <class C>
-    F2 miller_loop(std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<F1>>> const &points, C const &context) const
+    std::optional<F2> miller_loop(std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<F1>>> const &points, C const &context) const
     {
         auto f = F2::one(context);
         for (auto it = points.cbegin(); it != points.cend(); it++)
         {
-            f.mul(ate_pairing_loop(std::get<0>(*it), std::get<1>(*it), context));
+            std::optional<F2> const ml_opt = ate_pairing_loop(std::get<0>(*it), std::get<1>(*it), context);
+            if (!ml_opt) {
+                return {};
+            }
+            auto const ml = ml_opt.value();
+            f.mul(ml);
         }
         return f;
     }
 
     template <class C>
-    F2 ate_pairing_loop(
+    std::optional<F2> ate_pairing_loop(
         CurvePoint<Fp<N>> const &point,
         CurvePoint<F1> const &twist_point, C const &context) const
     {
         assert(point.is_normalized());
         assert(twist_point.is_normalized());
-        auto const twist_inv = this->twist.inverse().value();
+        auto const twist_inv_opt = this->twist.inverse();
+        if (!twist_inv_opt) {
+            return {};
+        };
+        
+        auto const twist_inv = twist_inv_opt.value();
 
         auto const p = precompute_g1(point);
-        auto const q = precompute_g2(twist_point, twist_inv, context);
+        auto const oq = precompute_g2(twist_point, twist_inv, context);
+        if (!oq) {
+            return {};
+        }
+        auto const q = oq.value();
         auto l1_coeff = F1::zero(context);
         l1_coeff.c0 = p.x;
         l1_coeff.sub(q.x_over_twist);
@@ -172,7 +192,11 @@ private:
             g_rnegr_at_p.c1 = t1;
 
             f.mul(g_rnegr_at_p);
-            f = f.inverse().value();
+            auto const of = f.inverse();
+            if (!of) {
+                return {};
+            }
+            f = of.value();
         }
 
         return f;
@@ -196,7 +220,7 @@ private:
     }
 
     template <class C>
-    PrecomputedG2<F1, N> precompute_g2(CurvePoint<F1> const &g2_point, F1 const &twist_inv, C const &context) const
+    std::optional<PrecomputedG2<F1, N>> precompute_g2(CurvePoint<F1> const &g2_point, F1 const &twist_inv, C const &context) const
     {
         // not asserting normalization, it will be asserted in the loop
         // precompute addition and doubling coefficients
@@ -238,7 +262,12 @@ private:
 
         if (this->x_is_negative)
         {
-            auto const rz_inv = r.z.inverse().value();
+            auto const orz_inv = r.z.inverse();
+            if (!orz_inv) {
+                return {};
+            }
+            auto const rz_inv = orz_inv.value();
+
             auto rz2_inv = rz_inv;
             rz2_inv.square();
             auto rz3_inv = rz_inv;
@@ -420,7 +449,7 @@ private:
     std::optional<F2> final_exponentiation(F2 const &f) const
     {
         auto const ovalue_inv = f.inverse();
-        if (ovalue_inv)
+        if (!ovalue_inv)
         {
             return {};
         }

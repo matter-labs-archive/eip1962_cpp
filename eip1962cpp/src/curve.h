@@ -79,9 +79,9 @@ public:
     CurvePoint(E x, E y) : CurvePoint(x, y, x.one())
     {
         if (x.is_zero() && y.is_zero()) {
-            x = x.zero();
-            y = y.one();
-            z = z.zero();
+            this->x = x.zero();
+            this->y = y.one();
+            this->z = z.zero();
         }
     }
 

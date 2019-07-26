@@ -1,6 +1,7 @@
 #include "api.h"
 #include "constants.h"
 #include "deserialization.h"
+#include "repr.h"
 #include "multiexp.h"
 #include "extension_towers/fp4.h"
 #include "pairings/mnt4.h"
@@ -22,9 +23,6 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
 {
     // Weierstrass curve
     auto const wc = deserialize_weierstrass_curve<F>(mod_byte_len, extension, deserializer, false);
-    if (wc.get_b().is_zero()) {
-        input_err("curve shape is not supported");
-    }
     // Run the operation for the result
     std::vector<u8> result;
     switch (operation)
@@ -119,9 +117,6 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 {
     // Deser Weierstrass 1 & Extension2
     auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, true);
-    if (!g1_curve.get_a().is_zero()) {
-        input_err("BN or BLS12 curves have A = 0");
-    }
     auto const extension2 = FieldExtension2(deserialize_non_residue<Fp<N>>(mod_byte_len, field, 2, deserializer), field);
 
     // Deser Extension6 & TwistType
@@ -158,9 +153,15 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     }
     auto const a_fp2 = Fp2<N>::zero(extension2);
     auto const g2_curve = WeierstrassCurve(a_fp2, b_fp2, g1_curve.subgroup_order(), g1_curve.order_len());
+    if (g2_curve.get_b().is_zero()) {
+        input_err("curve shape is not supported");
+    }
 
     // Decode u and it's sign
     auto const u = deserialize_scalar_with_bit_limit(max_u_bit_length, deserializer);
+    if (is_zero(u)) {
+        input_err("Loop parameters can not be zero");
+    }
     auto const u_is_negative = deserialize_sign(deserializer);
 
     // deser (CurvePoint<Fp<N>>,CurvePoint<F>) pairs
@@ -201,7 +202,7 @@ template <class F, class F2, class FEO, class FE, class ENGINE, usize N>
 std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &field, u8 extension_degree, Deserializer deserializer)
 {
     // Deser Weierstrass 1 & Extension
-    auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, true);
+    auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, false);
     auto const extension = FE(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree * 2, deserializer), field);
 
     // Construct Extension 2
@@ -226,9 +227,15 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
     b_fp2.mul_by_fp(g1_curve.get_b());
 
     auto const g2_curve = WeierstrassCurve<F>(a_fp2, b_fp2, g1_curve.subgroup_order(), g1_curve.order_len());
+    if (g2_curve.get_b().is_zero()) {
+        input_err("curve shape is not supported");
+    }
 
     // Deserialize x
     auto const x = deserialize_scalar_with_bit_limit(MAX_ATE_PAIRING_ATE_LOOP_COUNT, deserializer);
+    if (is_zero(x)) {
+        input_err("Loop parameters can not be zero");
+    }
     if (calculate_hamming_weight(x) > MAX_ATE_PAIRING_ATE_LOOP_COUNT_HAMMING)
     {
         input_err("X has too large hamming weight");
@@ -237,7 +244,13 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
 
     // Deserialize exp_w0 & exp_w1
     auto const exp_w0 = deserialize_scalar_with_bit_limit(MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH, deserializer);
+    if (is_zero(exp_w0)) {
+        input_err("Loop parameters can not be zero");
+    }
     auto const exp_w1 = deserialize_scalar_with_bit_limit(MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH, deserializer);
+    if (is_zero(exp_w1)) {
+        input_err("Loop parameters can not be zero");
+    }
     auto const exp_w0_is_negative = deserialize_sign(deserializer);
 
     // deser (CurvePoint<Fp<N>>,CurvePoint<F>) pairs
@@ -361,7 +374,21 @@ std::vector<std::uint8_t> run_limbed(u8 operation, std::optional<u8> curve_type,
     if (mod_top_byte == 0) {
         input_err("Invalid modulus encoding");
     }
-    auto limb_count = (mod_byte_len + 7) / 8 + (mod_top_byte >> 7);
+    auto modulus_bits = u32(mod_byte_len - 1) * 8;
+
+    u8 msb = 1 << 7;
+    for(u8 i = 0; i < 8; i++)
+    {
+        if((mod_top_byte << i) & msb)
+        {
+            break;
+        }
+        modulus_bits++;
+    }
+
+    auto limb_count = (modulus_bits / 64) + 1; // e.g. 256 bits will result in 5 limbs
+
+    // auto limb_count = (mod_byte_len + 7) / 8 + (mod_top_byte >> 7);
 
     // Call run_operation with adequate number of limbs
     switch (limb_count)
