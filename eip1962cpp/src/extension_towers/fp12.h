@@ -71,7 +71,7 @@ class Fp12 : public FpM2<Fp6_3<N>, FieldExtension2over3over2<N>, Fp12<N>, N>
 public:
     Fp12(Fp6_3<N> c0, Fp6_3<N> c1, FieldExtension2over3over2<N> const &field) : FpM2<Fp6_3<N>, FieldExtension2over3over2<N>, Fp12<N>, N>(c0, c1, field) {}
 
-    auto operator=(Fp12<N> const &other)
+	Fp12<N> operator=(Fp12<N> const &other)
     {
         this->c0 = other.c0;
         this->c1 = other.c1;
@@ -208,7 +208,7 @@ public:
 
         auto found_one = false;
 
-        for (auto it = RevBitIterator(exp); it.before();)
+        for (auto it = RevBitIterator<Fp12>(exp); it.before();)
         {
             auto const i = *it;
             if (found_one)

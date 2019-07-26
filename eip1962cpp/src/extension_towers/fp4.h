@@ -8,7 +8,7 @@
 #include "fpM2.h"
 #include "../field.h"
 
-using namespace cbn::literals;
+//using namespace literals;
 
 template <usize N>
 class FieldExtension2over2 : public FieldExtension2<N>
@@ -54,7 +54,7 @@ public:
     {
     }
 
-    auto operator=(Fp4<N> const &other)
+	Fp4<N> operator=(Fp4<N> const &other)
     {
         this->c0 = other.c0;
         this->c1 = other.c1;

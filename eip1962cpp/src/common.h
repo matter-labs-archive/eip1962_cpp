@@ -40,7 +40,7 @@ typedef std::size_t usize;
 
 // C++ shortcut for Rust Option
 template <class T>
-using Option = optional<T>;
+using Option = tl::optional<T>;
 
 typedef const std::string str;
 

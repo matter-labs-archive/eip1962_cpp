@@ -28,7 +28,7 @@ public:
 
         // Calculate non_residue_in_p_minus_one_over_2
         constexpr Repr<N> one = {1};
-        auto const p_minus_one_over_2 = cbn::shift_right(non_residue.field.mod() - one, 1);
+        auto const p_minus_one_over_2 = shift_right(non_residue.field.mod() - one, 1);
         non_residue_in_p_minus_one_over_2 = non_residue.pow(p_minus_one_over_2);
     }
 
@@ -57,7 +57,7 @@ protected:
         pc_indexes.resize(n);
 
         auto f = Fp12<N>::one(context);
-        auto it = RevBitIterator(six_u_plus_2);
+        auto it = RevBitIterator<Fp12<N>>(six_u_plus_2);
         it.before(); //skip 1
         for (; it.before();)
         {
@@ -105,7 +105,7 @@ protected:
 
         auto r = CurvePoint<Fp2<N>>(twist_point.x, twist_point.y);
 
-        auto it = RevBitIterator(six_u_plus_2);
+        auto it = RevBitIterator<Fp2<N>>(six_u_plus_2);
         it.before(); //skip 1
         for (; it.before();)
         {
@@ -141,7 +141,7 @@ protected:
         return ell_coeffs;
     }
 
-    std::optional<Fp12<N>> final_exponentiation(Fp12<N> const &f) const
+    tl::optional<Fp12<N>> final_exponentiation(Fp12<N> const &f) const
     {
         // use Zexe and pairing crate fused
         // https://eprint.iacr.org/2012/232.pdf

@@ -4,6 +4,9 @@
 #include "common.h"
 #include "mult.hpp"
 #include "slicing.hpp"
+#include "shift.hpp"
+#include "optional.hpp"
+#include "division.hpp"
 //#include "..//include/ctbignum/"
 //#include "ctbignum/ctbignum.hpp"
 

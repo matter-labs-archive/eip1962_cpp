@@ -262,7 +262,7 @@ WeierstrassCurve<F> deserialize_weierstrass_curve(u8 mod_byte_len, C const &fiel
         input_err("Group order is zero");
     }
 
-    return WeierstrassCurve(a, b, order, order_len);
+    return WeierstrassCurve<F>(a, b, order, order_len);
 }
 
 template <class F, class C>
@@ -270,7 +270,7 @@ CurvePoint<F> deserialize_curve_point(u8 mod_byte_len, C const &field, Weierstra
 {
     F x = deserialize_fpM(mod_byte_len, field, deserializer);
     F y = deserialize_fpM(mod_byte_len, field, deserializer);
-    auto const cp = CurvePoint(x, y);
+    auto const cp = CurvePoint<F>(x, y);
 
     if (!cp.check_on_curve(wc))
     {
@@ -302,7 +302,7 @@ std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<F>>> deserialize_points(u8 
             input_err("G1 or G2 point is not in the expected subgroup");
         }
 
-        points.push_back(std::tuple(g1, g2));
+        points.push_back(std::tuple<CurvePoint<Fp<N>>, CurvePoint<F>>(g1, g2));
     }
 
     return points;

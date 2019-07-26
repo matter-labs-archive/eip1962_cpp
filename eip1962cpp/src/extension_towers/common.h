@@ -14,7 +14,7 @@ Repr<M + 1> calc_frobenius_factor_2(Repr<M> const &base, usize div, std::string 
     constexpr Repr<M> one = {1};
     auto power = q_power - one;
     Repr<M> const rdiv = {div};
-    if (!cbn::is_zero(power % rdiv))
+    if (!is_zero(power % rdiv))
     {
         unknown_parameter_err("Failed to calculate Frobenius coeffs for " + err);
     }
@@ -100,7 +100,7 @@ public:
         auto found_begining = false;
         u64 w = 0;
         u64 bit_count = 0;
-        for (auto it = BitIterator(scalar); it.ok(); ++it)
+        for (auto it = BitIterator<E>(scalar); it.ok(); ++it)
         {
             auto const b = *it;
             if (b)

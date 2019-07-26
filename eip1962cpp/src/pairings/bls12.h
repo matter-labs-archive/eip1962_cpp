@@ -45,7 +45,7 @@ protected:
         pc_indexes.resize(n);
 
         auto f = Fp12<N>::one(context);
-        auto it = RevBitIterator(this->u);
+        auto it = RevBitIterator<Fp2<N>>(this->u);
         it.before(); //skip 1
         for (; it.before();)
         {
@@ -85,7 +85,7 @@ protected:
 
         auto r = CurvePoint<Fp2<N>>(twist_point.x, twist_point.y);
 
-        auto it = RevBitIterator(this->u);
+        auto it = RevBitIterator<Fp2<N>>(this->u);
         it.before(); //skip 1
         for (; it.before();)
         {
@@ -100,7 +100,7 @@ protected:
         return ell_coeffs;
     }
 
-    std::optional<Fp12<N>> final_exponentiation(Fp12<N> const &f) const
+    tl::optional<Fp12<N>> final_exponentiation(Fp12<N> const &f) const
     {
         // Computing the final exponentation following
         // https://eprint.iacr.org/2016/130.pdf.

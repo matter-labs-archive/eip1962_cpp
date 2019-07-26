@@ -52,7 +52,7 @@ public:
         auto res = this->one();
         auto found_one = false;
 
-        for (auto it = RevBitIterator(e); it.before();)
+        for (auto it = RevBitIterator<E>(e); it.before();)
         {
             auto i = *it;
             if (found_one)
@@ -82,9 +82,9 @@ public:
         }
 
         constexpr Repr<N> one = {1};
-        power = cbn::subtract_ignore_carry(power, one);
+        power = subtract_ignore_carry(power, one);
         Repr<N> divisor = {n};
-        if (!cbn::is_zero(power % divisor))
+        if (!is_zero(power % divisor))
         {
             return false;
         }

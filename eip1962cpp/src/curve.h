@@ -91,7 +91,7 @@ public:
         return CurvePoint(E::zero(context), E::one(context), E::zero(context));
     }
 
-    auto operator=(CurvePoint<E> const &other)
+    E operator=(CurvePoint<E> const &other)
     {
         x = other.x;
         y = other.y;
@@ -102,13 +102,13 @@ public:
     {
         if (is_zero())
         {
-            return tuple(x.zero(), x.zero());
+            return std::tuple<E,E>(x.zero(), x.zero());
         }
 
         auto point = *this;
         point.normalize();
 
-        return tuple(point.x, point.y);
+        return std::tuple<E, E>(point.x, point.y);
     }
 
     bool check_on_curve(WeierstrassCurve<E> const &wc) const
@@ -202,7 +202,7 @@ public:
 
         auto res = CurvePoint<E>::zero(context);
         auto found_one = false;
-        for (auto it = RevBitIterator(scalar); it.before();)
+        for (auto it = RevBitIterator<E>(scalar); it.before();)
         {
             auto i = *it;
             if (found_one)

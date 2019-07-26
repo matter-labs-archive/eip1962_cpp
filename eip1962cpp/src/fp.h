@@ -6,8 +6,6 @@
 #include "repr.h"
 #include "field.h"
 
-using namespace cbn::literals;
-
 template <usize N>
 class Fp : public Element<Fp<N>>
 {
@@ -32,7 +30,7 @@ public:
 
     Fp(Fp<N> const &other) : Fp(other.repr, other.field) {}
 
-    auto operator=(Fp<N> const &other)
+	Repr<N> operator=(Fp<N> const &other)
     {
         this->repr = other.repr;
     }
@@ -107,40 +105,40 @@ public:
 
     void square()
     {
-        repr = cbn::montgomery_mul(repr, repr, field.mod(), field.mont_inv());
+        repr = montgomery_mul(repr, repr, field.mod(), field.mont_inv());
     }
 
     void mul2()
     {
-        repr = cbn::shift_left(repr, 1) % field.mod();
+        repr = shift_left(repr, 1) % field.mod();
     }
 
     void mul(Fp<N> const &e)
     {
-        repr = cbn::montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
+        repr = montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
     }
 
     void sub(Fp<N> const &e)
     {
-        repr = cbn::mod_sub(repr, e.repr, field.mod());
+        repr = mod_sub(repr, e.repr, field.mod());
     }
 
     void add(Fp<N> const &e)
     {
-        repr = cbn::mod_add(repr, e.repr, field.mod());
+        repr = mod_add(repr, e.repr, field.mod());
     }
 
     void negate()
     {
         if (!is_zero())
         {
-            repr = cbn::subtract_ignore_carry(field.mod(), repr);
+            repr = subtract_ignore_carry(field.mod(), repr);
         }
     }
 
     bool is_zero() const
     {
-        return cbn::is_zero(repr);
+        return is_zero(repr);
     }
 
     bool operator==(Fp<N> const &other) const
@@ -180,7 +178,7 @@ private:
 
     Repr<N> into_repr() const
     {
-        return cbn::montgomery_reduction(cbn::detail::pad<N>(repr), field.mod(), field.mont_inv());
+        return montgomery_reduction(pad<N>(repr), field.mod(), field.mont_inv());
     }
 
     Option<Fp<N>> mont_inverse() const
@@ -203,34 +201,34 @@ private:
         auto found = false;
         for (usize i = 0; i < N * 128; i++)
         {
-            if (cbn::is_zero(v))
+            if (is_zero(v))
             {
                 found = true;
                 break;
             }
-            if (cbn::is_even(u))
+            if (is_even(u))
             {
-                u = cbn::div2(u);
-                s = cbn::mul2(s);
+                u = div2(u);
+                s = mul2(s);
             }
-            else if (cbn::is_even(v))
+            else if (is_even(v))
             {
-                v = cbn::div2(v);
-                r = cbn::mul2(r);
+                v = div2(v);
+                r = mul2(r);
             }
             else if (u > v)
             {
-                u = cbn::subtract_ignore_carry(u, v);
-                u = cbn::div2(u);
-                r = cbn::add_ignore_carry(r, s);
-                s = cbn::mul2(s);
+                u = subtract_ignore_carry(u, v);
+                u = div2(u);
+                r = add_ignore_carry(r, s);
+                s = mul2(s);
             }
             else if (v >= u)
             {
-                v = cbn::subtract_ignore_carry(v, u);
-                v = cbn::div2(v);
-                s = cbn::add_ignore_carry(s, r);
-                r = cbn::mul2(r);
+                v = subtract_ignore_carry(v, u);
+                v = div2(v);
+                s = add_ignore_carry(s, r);
+                r = mul2(r);
             }
 
             k += 1;
@@ -243,10 +241,10 @@ private:
 
         if (r >= modulus)
         {
-            r = cbn::subtract_ignore_carry(r, modulus);
+            r = subtract_ignore_carry(r, modulus);
         }
 
-        r = cbn::subtract_ignore_carry(modulus, r);
+        r = subtract_ignore_carry(modulus, r);
 
         // phase 2
 
@@ -258,14 +256,14 @@ private:
 
         for (usize i = 0; i < (k - mont_power_param); i++)
         {
-            if (cbn::is_even(r))
+            if (is_even(r))
             {
-                r = cbn::div2(r);
+                r = div2(r);
             }
             else
             {
-                r = cbn::add_ignore_carry(r, modulus);
-                r = cbn::div2(r);
+                r = add_ignore_carry(r, modulus);
+                r = div2(r);
             }
         }
 

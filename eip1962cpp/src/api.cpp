@@ -83,7 +83,7 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
         {
             auto const p = deserialize_curve_point<F>(mod_byte_len, extension, wc, deserializer);
             auto const scalar = deserialize_scalar(wc, deserializer);
-            pairs.push_back(tuple(p, scalar));
+            pairs.push_back(std::tuple<CurvePoint<F>, std::vector<u64>>(p, scalar));
         }
 
         // Apply Multiexponentiation
@@ -107,16 +107,16 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 {
     // Deser Weierstrass 1 & Extension2
     auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, true);
-    auto const extension2 = FieldExtension2(deserialize_non_residue<Fp<N>>(mod_byte_len, field, 2, deserializer), field);
+    auto const extension2 = FieldExtension2<N>(deserialize_non_residue<Fp<N>>(mod_byte_len, field, 2, deserializer), field);
 
     // Deser Extension6 & TwistType
     auto const e6_non_residue = deserialize_non_residue<Fp2<N>>(mod_byte_len, extension2, 6, deserializer);
     auto const twist_type = deserialize_pairing_twist_type(deserializer);
     auto exp_base = WindowExpBase<Fp2<N>>(e6_non_residue, Fp2<N>::one(extension2), 8);
-    auto const extension6 = FieldExtension3over2(e6_non_residue, extension2, exp_base);
+    auto const extension6 = FieldExtension3over2<N>(e6_non_residue, extension2, exp_base);
 
     // Construct Extension12
-    auto const extension12 = FieldExtension2over3over2(extension6, exp_base);
+    auto const extension12 = FieldExtension2over3over2<N>(extension6, exp_base);
 
     // Compute Weierstrass 2
     auto const o_e6_non_residue_inv = e6_non_residue.inverse();
@@ -142,7 +142,7 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     }
     }
     auto const a_fp2 = Fp2<N>::zero(extension2);
-    auto const g2_curve = WeierstrassCurve(a_fp2, b_fp2, g1_curve.subgroup_order(), g1_curve.order_len());
+    auto const g2_curve = WeierstrassCurve<N>(a_fp2, b_fp2, g1_curve.subgroup_order(), g1_curve.order_len());
 
     // Decode u and it's sign
     auto const u = deserialize_scalar_with_bit_limit(max_u_bit_length, deserializer);
@@ -249,11 +249,11 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
 
 // Executes operation with known limb length
 template <usize N>
-std::vector<std::uint8_t> run_operation(u8 operation, std::optional<u8> curve_type, u8 mod_byte_len, Deserializer deserializer)
+std::vector<std::uint8_t> run_operation(u8 operation, tl::optional<u8> curve_type, u8 mod_byte_len, Deserializer deserializer)
 {
     // deser Modulus -> Field
     auto const modulus = deserialize_modulus<N>(mod_byte_len, deserializer);
-    auto const field = PrimeField(modulus);
+    auto const field = PrimeField<N>(modulus);
 
     if (curve_type)
     {
@@ -325,7 +325,7 @@ std::vector<std::uint8_t> run_operation(u8 operation, std::optional<u8> curve_ty
     }
 }
 
-std::vector<std::uint8_t> run_limbed(u8 operation, std::optional<u8> curve_type, Deserializer deserializer)
+std::vector<std::uint8_t> run_limbed(u8 operation, tl::optional<u8> curve_type, Deserializer deserializer)
 {
     // Deserialize modulus length
     auto mod_byte_len = deserializer.byte("Input is not long enough to get modulus length");
@@ -386,7 +386,7 @@ bool run(std::vector<std::uint8_t> const& input, std::vector<std::uint8_t>& outp
         auto deserializer = Deserializer(input);
         auto operation = deserializer.byte("Input should be longer than operation type encoding");
 
-        std::optional<u8> curve_type;
+        tl::optional<u8> curve_type;
         switch (operation)
         {
         case OPERATION_PAIRING:
@@ -416,7 +416,7 @@ bool run(std::vector<std::uint8_t> const& input, std::vector<std::uint8_t>& outp
     {
         err = e.what();
     }
-    catch (std::bad_optional_access const &e) // TODO: Remove when rework the arithmetics
+    catch (tl::bad_optional_access const &e) // TODO: Remove when rework the arithmetics
     {
         err = e.what();
     }

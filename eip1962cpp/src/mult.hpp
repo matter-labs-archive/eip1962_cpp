@@ -71,5 +71,5 @@ constexpr T partial_mul(std::array<T, N> u, std::array<T, N> v) {
 
 template <typename T, size_t N1, size_t N2>
 constexpr T operator*(std::array<T, N1> a, std::array<T, N2> b) {
-	return mul(a, b);
+	return mul<N1,N2>(a, b);
 }

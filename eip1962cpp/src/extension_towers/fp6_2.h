@@ -57,7 +57,7 @@ public:
     {
     }
 
-    auto operator=(Fp6_2<N> const &other)
+	Fp6_2<N> operator=(Fp6_2<N> const &other)
     {
         this->c0 = other.c0;
         this->c1 = other.c1;

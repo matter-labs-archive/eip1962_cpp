@@ -7,7 +7,7 @@
 #include "../field.h"
 #include "common.h"
 
-using namespace cbn::literals;
+//using namespace literals;
 
 template <usize N>
 class FieldExtension3 : public PrimeField<N>
@@ -64,7 +64,7 @@ public:
 
     Fp3(Fp<N> c0, Fp<N> c1, Fp<N> c2, FieldExtension3<N> const &field) : field(field), c0(c0), c1(c1), c2(c2) {}
 
-    auto operator=(Fp3<N> const &other)
+	Fp<N> operator=(Fp3<N> const &other)
     {
         c0 = other.c0;
         c1 = other.c1;

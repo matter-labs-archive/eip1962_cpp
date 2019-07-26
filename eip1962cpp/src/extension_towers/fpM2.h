@@ -7,7 +7,7 @@
 #include "fp3.h"
 #include "../field.h"
 
-using namespace cbn::literals;
+//using namespace literals;
 
 template <class F, class E, class P, usize N>
 class FpM2 : public Element<P>
@@ -21,7 +21,7 @@ public:
     {
     }
 
-    auto operator=(P const &other)
+    F operator=(P const &other)
     {
         c0 = other.c0;
         c1 = other.c1;

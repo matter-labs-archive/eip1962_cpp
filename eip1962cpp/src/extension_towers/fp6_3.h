@@ -72,7 +72,7 @@ public:
 
     Fp6_3(Fp2<N> c0, Fp2<N> c1, Fp2<N> c2, FieldExtension3over2<N> const &field) : field(field), c0(c0), c1(c1), c2(c2) {}
 
-    auto operator=(Fp6_3<N> const &other)
+	Fp6_3<N> operator=(Fp6_3<N> const &other)
     {
         c0 = other.c0;
         c1 = other.c1;
@@ -211,7 +211,7 @@ public:
     }
 
     // Computes the multiplicative inverse of this element, if nonzero.
-    std::optional<Fp6_3<N>> inverse() const
+    tl::optional<Fp6_3<N>> inverse() const
     {
         auto e0 = this->c2;
         field.mul_by_nonresidue(e0);

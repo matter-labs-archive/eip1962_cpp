@@ -26,7 +26,7 @@ public:
             TwistType twist_type,
             WeierstrassCurve<Fp2<N>> const &curve_twist) : u(u), u_is_negative(u_is_negative), twist_type(twist_type), curve_twist(curve_twist) {}
 
-    std::optional<Fp12<N>>
+    tl::optional<Fp12<N>>
     pair(std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<Fp2<N>>>> const &points, FieldExtension2over3over2<N> const &context) const
     {
         if (points.size() == 0)
@@ -42,7 +42,7 @@ protected:
 
     virtual std::vector<ThreePoint<N>> prepare(CurvePoint<Fp2<N>> const &twist_point, FieldExtension2over3over2<N> const &context) const = 0;
 
-    virtual std::optional<Fp12<N>> final_exponentiation(Fp12<N> const &f) const = 0;
+    virtual tl::optional<Fp12<N>> final_exponentiation(Fp12<N> const &f) const = 0;
 
     ThreePoint<N> doubling_step(
         CurvePoint<Fp2<N>> &r,
@@ -137,9 +137,9 @@ protected:
         switch (twist_type)
         {
         case M:
-            return std::tuple(i, j_by_three, h);
+            return std::tuple<Fp2<N>, Fp2<N>, Fp2<N>>(i, j_by_three, h);
         case D: // (0, 3, 4) = (-2*Y*Z, 3*X^2, 3*b*Z^2 - Y^2)
-            return std::tuple(h, j_by_three, i);
+            return std::tuple<Fp2<N>, Fp2<N>, Fp2<N>>(h, j_by_three, i);
         }
         unreachable("");
     }
@@ -221,9 +221,9 @@ protected:
         switch (twist_type)
         {
         case M:
-            return std::tuple(j, theta, lambda);
+            return std::tuple<Fp2<N>, Fp2<N>, Fp2<N>>(j, theta, lambda);
         case D: // (0, 3, 4) = (lambda, -theta, Theta*x - Lambda*y)
-            return std::tuple(lambda, theta, j);
+            return std::tuple<Fp2<N>, Fp2<N>, Fp2<N>>(lambda, theta, j);
         }
         unreachable("");
     }

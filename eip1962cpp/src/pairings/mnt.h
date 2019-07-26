@@ -57,7 +57,7 @@ public:
     }
 
     template <class C>
-    std::optional<F2>
+    tl::optional<F2>
     pair(std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<F1>>> const &points, C const &context) const
     {
         if (points.size() == 0)
@@ -100,7 +100,7 @@ private:
         usize dbl_idx = 0;
         usize add_idx = 0;
         // The for loop is executed for all bits (EXCEPT the MSB itself) of
-        auto it = RevBitIterator(this->x);
+        auto it = RevBitIterator<C>(this->x);
         it.before(); // skip 1
         while (it.before())
         {
@@ -222,7 +222,7 @@ private:
             F1::one(context),
         };
 
-        auto it = RevBitIterator(this->x);
+        auto it = RevBitIterator<F1>(this->x);
         it.before(); // skip 1
         while (it.before())
         {
@@ -417,7 +417,7 @@ private:
         return coeff;
     }
 
-    std::optional<F2> final_exponentiation(F2 const &f) const
+    tl::optional<F2> final_exponentiation(F2 const &f) const
     {
         auto const ovalue_inv = f.inverse();
         if (ovalue_inv)
