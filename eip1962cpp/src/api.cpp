@@ -375,20 +375,11 @@ std::vector<std::uint8_t> run_limbed(u8 operation, std::optional<u8> curve_type,
         input_err("Invalid modulus encoding");
     }
     auto modulus_bits = u32(mod_byte_len - 1) * 8;
-
-    u8 msb = 1 << 7;
-    for(u8 i = 0; i < 8; i++)
-    {
-        if((mod_top_byte << i) & msb)
-        {
-            break;
-        }
-        modulus_bits++;
-    }
+    if (mod_top_byte >> 7) {
+        modulus_bits += 8;
+    } // alternative case does not matter
 
     auto limb_count = (modulus_bits / 64) + 1; // e.g. 256 bits will result in 5 limbs
-
-    // auto limb_count = (mod_byte_len + 7) / 8 + (mod_top_byte >> 7);
 
     // Call run_operation with adequate number of limbs
     switch (limb_count)
