@@ -166,13 +166,17 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 
     // deser (CurvePoint<Fp<N>>,CurvePoint<F>) pairs
     auto const points = deserialize_points<N, Fp2<N>>(mod_byte_len, extension2, g1_curve, g2_curve, deserializer);
-    if (points.size() == 0) {
-        input_err("No points supplied");   
-    }
-
     if (!deserializer.ended()) {
         input_err("Input contains garbage at the end");  
     }
+
+    if (points.size() == 0) {
+        std::vector<std::uint8_t> result;
+        result.push_back(1);
+        return result; // formally it's identity if all points are infinities
+    }
+
+
     // Construct BN engine
     ENGINE const engine(u, u_is_negative, twist_type, g2_curve, e6_non_residue);
 
@@ -255,12 +259,14 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
 
     // deser (CurvePoint<Fp<N>>,CurvePoint<F>) pairs
     auto const points = deserialize_points<N, F>(mod_byte_len, extension, g1_curve, g2_curve, deserializer);
-    if (points.size() == 0) {
-        input_err("No points supplied");   
-    }
-
     if (!deserializer.ended()) {
         input_err("Input contains garbage at the end");  
+    }
+
+    if (points.size() == 0) {
+        std::vector<std::uint8_t> result;
+        result.push_back(1);
+        return result; // formally it's identity if all points are infinities
     }
 
     // Construct MNT engine

@@ -106,9 +106,12 @@ public:
         }
 
         auto point = *this;
-        point.normalize();
-
-        return tuple(point.x, point.y);
+        if (point.is_normalized()) {
+            return tuple(point.x, point.y);
+        } else {
+            point.normalize();
+            return point.xy();
+        }
     }
 
     bool check_on_curve(WeierstrassCurve<E> const &wc) const
@@ -436,7 +439,13 @@ private:
             return;
         }
 
-        E const z_inv = z.inverse().value_or(x.zero());
+        auto const oz_inv = z.inverse();
+        if (!oz_inv) {
+            z = x.zero();
+            return;
+        }
+
+        auto const z_inv = oz_inv.value();
         auto zinv_powered = z_inv;
         zinv_powered.square();
 

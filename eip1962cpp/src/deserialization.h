@@ -306,7 +306,9 @@ std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<F>>> deserialize_points(u8 
             input_err("G1 or G2 point is not in the expected subgroup");
         }
 
-        points.push_back(std::tuple(g1, g2));
+        if (!g1.is_zero() && !g2.is_zero()) {
+            points.push_back(std::tuple(g1, g2));
+        }
     }
 
     return points;
