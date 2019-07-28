@@ -142,7 +142,7 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     }
     }
     auto const a_fp2 = Fp2<N>::zero(extension2);
-    auto const g2_curve = WeierstrassCurve<N>(a_fp2, b_fp2, g1_curve.subgroup_order(), g1_curve.order_len());
+    auto const g2_curve = WeierstrassCurve<Fp2<N>>(a_fp2, b_fp2, g1_curve.subgroup_order(), g1_curve.order_len());
 
     // Decode u and it's sign
     auto const u = deserialize_scalar_with_bit_limit(max_u_bit_length, deserializer);
@@ -307,7 +307,7 @@ std::vector<std::uint8_t> run_operation(u8 operation, tl::optional<u8> curve_typ
         case 2:
         {
             // deser Extension
-            FieldExtension2<N> const extension(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree, deserializer), field);
+            FieldExtension2<N> extension(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree, deserializer), field);
 
             return run_operation_extension<N, Fp2<N>>(operation, mod_byte_len, extension, extension_degree, deserializer);
         }

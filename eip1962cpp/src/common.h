@@ -4,6 +4,7 @@
 // Comment this define to turn on asserts and println
 #define NDEBUG
 
+#include <experimental/array>
 #include <assert.h>
 #include <optional>
 #include <vector>
@@ -15,7 +16,7 @@
 #include "optional.hpp"
 
 // **************** RUST equivalent TYPES for ease of porting, and is also shorter to write ******************** //
-using namespace std;
+//using namespace std;
 
 // C++ version of Rust u8
 typedef std::uint8_t u8;

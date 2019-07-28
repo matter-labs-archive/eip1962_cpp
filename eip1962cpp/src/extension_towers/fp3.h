@@ -5,6 +5,10 @@
 #include "../element.h"
 #include "../fp.h"
 #include "../field.h"
+#include "../mult.hpp"
+#include "..//slicing.hpp"
+#include "..//division.hpp"
+#include "..//relational_ops.hpp"
 #include "common.h"
 
 //using namespace literals;
@@ -26,6 +30,7 @@ public:
         auto const f_1 = calc_frobenius_factor(non_residue, field.mod(), 3, "Fp3");
 
         // NON_RESIDUE**(((q^2) - 1) / 3)
+		Repr<N> t = field.mod() * field.mod();
         auto const f_2 = calc_frobenius_factor(non_residue, field.mod() * field.mod(), 3, "Fp3");
 
         auto const f_0_c2 = f_0;

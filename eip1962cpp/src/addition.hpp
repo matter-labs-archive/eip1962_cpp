@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <array>
+#include <experimental/array>
 #include "integer_sequence.hpp"
 
 template <typename T, size_t M, size_t N>

@@ -17,7 +17,7 @@ class FieldExtension2 : public PrimeField<N>
 public:
     std::array<Fp<N>, 2> frobenius_coeffs_c1;
 
-    FieldExtension2(Fp<N> non_residue, PrimeField<N> const &field) : PrimeField<N>(field), _non_residue(non_residue), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field)})
+    FieldExtension2(Fp<N> non_residue, PrimeField<N> &field) : PrimeField<N>(field), _non_residue(non_residue), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field)})
     {
         // calculate_frobenius_coeffs
 

@@ -2,7 +2,7 @@
 #define __SHIFT_HPP
 
 template <size_t N, typename T>
-constexpr T shift_right(std::array<T,N> a, size_t k) {
+T shift_right(std::array<T,N> a, size_t k) {
   // shift-right the big integer a by k bits
 	std::array<T, N> res{};
 
@@ -16,7 +16,7 @@ constexpr T shift_right(std::array<T,N> a, size_t k) {
 }
 
 template <size_t N, typename T>
-constexpr T shift_left(std::array<T,N> a, size_t k) {
+T shift_left(std::array<T,N> a, size_t k) {
   // shift-left the big integer a by k bits
   // answer has 1 limb more
   //

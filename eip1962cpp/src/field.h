@@ -8,14 +8,14 @@
 template <usize N>
 class PrimeField
 {
-    Repr<N> modulus;
+    std::array<uint64_t, N> modulus;
     u64 mont_power_;
-    Repr<N> mont_r_;
-    Repr<N> mont_r2_;
+	std::array<uint64_t, N+1> mont_r_;
+	std::array<uint64_t, 2*(N+1)> mont_r2_;
     u64 mont_inv_;
 
 public:
-    PrimeField(Repr<N> modulus) : modulus(modulus), mont_power_(N * LIMB_BITS)
+    PrimeField(std::array<uint64_t, N> modulus) : modulus(modulus), mont_power_(N * LIMB_BITS)
     {
         // Compute -m^-1 mod 2**64 by exponentiating by totient(2**64) - 1
         u64 inv = 1;
@@ -27,24 +27,24 @@ public:
         inv = (std::numeric_limits<u64>::max() - inv) + 2 + std::numeric_limits<u64>::max();
         mont_inv_ = inv;
 
-        Repr<N + 1> pow_N_LIMB_BITS = {0};
+		std::array<uint64_t, N+1> pow_N_LIMB_BITS = {0};
         pow_N_LIMB_BITS[N] = 1;
         mont_r_ = pow_N_LIMB_BITS % modulus;
 
         mont_r2_ = (mont_r_ * mont_r_) % modulus;
     }
 
-    Repr<N> mod() const
+	std::array<uint64_t, N> mod()
     {
         return modulus;
     }
 
-    Repr<N> mont_r() const
+	std::array<uint64_t, N> mont_r()
     {
         return mont_r_;
     }
 
-    Repr<N> mont_r2() const
+	std::array<uint64_t, N> mont_r2()
     {
         return mont_r2_;
     }
@@ -55,12 +55,12 @@ public:
     }
 
     // Montgomery parametare for multiplication
-    u64 mont_inv() const
+    u64 mont_inv()
     {
         return mont_inv_;
     }
 
-    bool is_valid(Repr<N> const &repr) const
+    bool is_valid(std::array<uint64_t, N> const &repr)
     {
         return repr < modulus;
     }

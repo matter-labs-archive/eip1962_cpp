@@ -7,6 +7,7 @@
 #include "shift.hpp"
 #include "optional.hpp"
 #include "division.hpp"
+#include "relational_ops.hpp"
 //#include "..//include/ctbignum/"
 //#include "ctbignum/ctbignum.hpp"
 

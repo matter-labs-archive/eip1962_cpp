@@ -5,15 +5,15 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <array>
+#include <experimental/array>
+#include "slicing.hpp"
 
 template <typename Q, typename R> struct DivisionResult {
   Q quotient;
   R remainder;
 };
 
-template <size_t M, typename T> constexpr  
-DivisionResult<std::array<T,M>,std::array<T,1>>
+template <size_t M, typename T> DivisionResult<std::array<T,M>,std::array<T,1>>
 short_div(std::array<T,M> u, T v) {
   using TT = typename dbl_bitlen<T>::type;
   TT r{0};
@@ -27,7 +27,7 @@ short_div(std::array<T,M> u, T v) {
 }
 
 template <size_t M, size_t N, typename T>
-constexpr DivisionResult<std::array<T,M>, std::array<T,N>> div(std::array<T,M> u,
+ DivisionResult<std::array<T,M>, std::array<T,N>> div(std::array<T,M> u,
 	std::array<T,N> v) {
 
   using TT = typename dbl_bitlen<T>::type;
@@ -90,13 +90,15 @@ constexpr DivisionResult<std::array<T,M>, std::array<T,N>> div(std::array<T,M> u
 }
 
 template <typename T, size_t N1, size_t N2>
-constexpr T operator/(std::array<T,N1> a, std::array<T,N2> b) {
+std::array<T, N1> operator/(std::array<T,N1> a, std::array<T,N2> b) {
   return div(a, b).quotient;
 }
 
 template <typename T, size_t N1, size_t N2>
-constexpr T operator%(std::array<T, N1> a, std::array<T, N2> b) {
-  return div(a, b).remainder;
+std::array<T, N1> operator%(std::array<T, N1> a, std::array<T, N2> b) {
+	DivisionResult<std::array<T, N1>, std::array<T, N2>> a1{ {} };
+	a1 = div(a, b);
+	return a1.remainder;
 }
 
 #endif
