@@ -34,7 +34,7 @@ fn main() {
             // .opt_level_str("3")
         let instrument = params.get_compiler();
         if !instrument.is_like_clang() {
-            panic("Fuzzing target should be compiled by Clange");
+            panic!("Fuzzing target should be compiled by Clange");
         }
         params.compile("eip1962cpp_fuzz.a");
     }
@@ -57,7 +57,7 @@ fn main() {
         // .opt_level_str("3")
         let instrument = params.get_compiler();
         if !instrument.is_like_clang() {
-            panic("Fuzzing target should be compiled by Clange");
+            panic!("Fuzzing target should be compiled by Clange");
         }
         params.compile("eip1962cpp_fuzz.a");
     }
