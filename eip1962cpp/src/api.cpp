@@ -472,3 +472,90 @@ run(std::vector<std::uint8_t> const &input)
         return e.what();
     }
 }
+
+// Main API function which receives ABI input and returns the result of operations, or description of occured error.
+std::variant<std::vector<std::uint8_t>, std::basic_string<char>>
+run_with_operation(operation_type operation, std::vector<std::uint8_t> const &input)
+{
+    try
+    {
+        // Deserialize operation
+        auto deserializer = Deserializer(input);
+        u8 raw_operation;
+        std::optional<u8> curve_type;
+        
+        switch (operation)
+        {
+        case pair_bls12:
+        {
+            curve_type = BLS12;
+            raw_operation = OPERATION_PAIRING;
+            break;
+        }
+        case pair_bn:
+        {
+            curve_type = BN;
+            raw_operation = OPERATION_PAIRING;
+            break;
+        }
+        case pair_mnt4:
+        {
+            curve_type = MNT4;
+            raw_operation = OPERATION_PAIRING;
+            break;
+        }
+        case pair_mnt6:
+        {
+            curve_type = MNT6;
+            raw_operation = OPERATION_PAIRING;
+            break;
+        }
+        case g1_add:
+        {
+            raw_operation = OPERATION_G1_ADD;
+            break;
+        }
+        case g1_mul:
+        {
+            raw_operation = OPERATION_G1_MUL;
+            break;
+        }
+        case g1_multiexp:
+        {
+            raw_operation = OPERATION_G1_MULTIEXP;
+            break;
+        }
+        case g2_add:
+        {
+            raw_operation = OPERATION_G2_ADD;
+            break;
+        }
+        case g2_mul:
+        {
+            raw_operation = OPERATION_G2_MUL;
+            break;
+        }
+        case g2_multiexp:
+        {
+            raw_operation = OPERATION_G2_MULTIEXP;
+            break;
+        }
+        default:
+            input_err("Unknown operation type");
+        }
+
+        return run_limbed(operation, curve_type, deserializer);
+    }
+    catch (std::domain_error const &e)
+    {
+        return e.what();
+    }
+    catch (std::runtime_error const &e)
+    {
+        return e.what();
+    }
+    catch (std::bad_optional_access const &e) // TODO: Remove when rework the arithmetics
+    {
+        return e.what();
+    }
+}
