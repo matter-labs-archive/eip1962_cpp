@@ -1,7 +1,7 @@
 mod api;
 mod enums;
 
-pub use self::enums::OperationType;
+pub use self::enums::*;
 
 const MAX_OUTPUT_LEN: usize = 256*3*2; // output if Fp = 1023 bits, Fp3 extension, affine point
 const ERROR_DESCRIPTION_LEN: usize = 256;
@@ -69,7 +69,6 @@ pub fn meter(bytes: &[u8]) -> Result<u64, String> {
 
     Ok(gas)
 }
-
 
 // This is pure rust API
 pub fn perform_operation(operation: OperationType, bytes: &[u8]) -> Result<Vec<u8>, String> {
