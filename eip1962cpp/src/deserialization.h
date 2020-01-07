@@ -254,6 +254,9 @@ WeierstrassCurve<F> deserialize_weierstrass_curve(u8 mod_byte_len, C const &fiel
     }
 
     auto order_len = deserializer.byte("Input is not long enough to get group size length");
+    if (order_len > MAX_GROUP_BYTE_LEN) {
+        input_err("Group order length is too large");
+    }
     auto order = deserializer.dyn_number(order_len, "Input is not long enough to get main group order size");
 
     auto zero = true;

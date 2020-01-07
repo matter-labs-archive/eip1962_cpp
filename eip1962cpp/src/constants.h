@@ -36,17 +36,27 @@ static const u8 OPERATION_G2_MULTIEXP = 0x06;
 
 static const u8 OPERATION_PAIRING = 0x07;
 
+// Usefull constants //
+
+static const usize NUM_LIMBS_MIN = 4;
+static const usize NUM_LIMBS_MAX = 16;
+static const usize NUM_GROUP_LIMBS_MIN = 1;
+static const usize NUM_GROUP_LIMBS_MAX = 16;
+
+static const usize MAX_MODULUS_BYTE_LEN = 128;
+static const usize MAX_GROUP_BYTE_LEN = 128;
+
 // ****************************** Sane Limits **************************** //
-static const usize MAX_BLS12_X_BIT_LENGTH = 512;
-static const usize MAX_BN_U_BIT_LENGTH = 512;
+static const usize MAX_BLS12_X_BIT_LENGTH = 128;
+static const usize MAX_BN_U_BIT_LENGTH = 128;
 
-static const u32 MAX_BLS12_X_HAMMING = 512;
-static const u32 MAX_BN_SIX_U_PLUS_TWO_HAMMING = 512;
+static const u32 MAX_BLS12_X_HAMMING = 128;
+static const u32 MAX_BN_SIX_U_PLUS_TWO_HAMMING = 128;
 
-static const usize MAX_ATE_PAIRING_ATE_LOOP_COUNT = 2048;
-static const u32 MAX_ATE_PAIRING_ATE_LOOP_COUNT_HAMMING = 2048;
+static const usize MAX_ATE_PAIRING_ATE_LOOP_COUNT = 2032;
+static const u32 MAX_ATE_PAIRING_ATE_LOOP_COUNT_HAMMING = 2032;
 
-static const usize MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH = 2048;
-static const usize MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH = 2048;
+static const usize MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH = 2032;
+static const usize MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH = 2032;
 
 #endif
