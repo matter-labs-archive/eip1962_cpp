@@ -71,6 +71,8 @@ void add_nocarry(std::vector<u64> &repr, u64 value);
 
 void add_scalar(std::vector<u64> &repr, u64 value);
 
+void sub_scalar(std::vector<u64> &repr, u64 value);
+
 // a >= b
 // Where a and b are numbers
 bool greater_or_equal(std::vector<u64> const &a, std::vector<u64> const &b);

@@ -122,6 +122,29 @@ private:
     MntParameters& operator=(const MntParameters&)= delete;
 };
 
+template<const unsigned char *data>
+class BlsBnParameters {
+public:
+  static BlsBnParameters& getInstance() {
+    static BlsBnParameters instance;
+    return instance;
+  }
+    u64 multiplier;
+    std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller;
+    std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp;
+private:
+    BlsBnParameters() {
+        auto prices_json = json::parse(reinterpret_cast<const char*>(data));
+        std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller_prices_vec = prices_json["miller"];
+        std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp_prices_vec = prices_json["final_exp"];
+        miller = miller_prices_vec;
+        final_exp = final_exp_prices_vec;
+        multiplier = prices_json["multiplier"];
+    }
+    ~BlsBnParameters()= default;
+    BlsBnParameters(const BlsBnParameters&)= delete;
+    BlsBnParameters& operator=(const BlsBnParameters&)= delete;
+};
 
 struct G1G2CurveData {
     u64 modulus_limbs;
@@ -140,6 +163,24 @@ struct MntCurveData {
     u64 w0_hamming;
     u64 w1_bits;
     u64 w1_hamming;
+    u64 num_pairs;
+};
+
+struct Bls12CurveData {
+    u64 modulus_limbs;
+    u64 group_order_limbs;
+    u64 x_bits;
+    u64 x_hamming;
+    u64 num_pairs;
+};
+
+struct BnCurveData {
+    u64 modulus_limbs;
+    u64 group_order_limbs;
+    u64 u_bits;
+    u64 u_hamming;
+    u64 six_u_plus_two_bits;
+    u64 six_u_plus_two_hamming;
     u64 num_pairs;
 };
 
@@ -237,11 +278,126 @@ MntCurveData<EXT> parse_mnt_data(u8 mod_byte_len,  Deserializer &deserializer) {
         input_err("Input is not long enough");
     }
 
-
     struct MntCurveData<EXT> data = {u64(N), group_order_limbs, ate_bits, ate_hamming, w0_bits, w0_hamming, w1_bits, w1_hamming, num_pairs};
 
     return data;
 }
+
+template <usize N>
+Bls12CurveData parse_bls12_data(u8 mod_byte_len,  Deserializer &deserializer) {
+    auto const modulus = deserialize_modulus<N>(mod_byte_len, deserializer);
+
+    deserializer.advance(mod_byte_len, "Input is not long enough to read A parameter");
+    deserializer.advance(mod_byte_len, "Input is not long enough to read B parameter");
+    
+    auto order_len = deserialize_group_order_length(deserializer);
+    auto order = deserialize_group_order(order_len, deserializer);
+
+    auto zero = is_zero(order);
+    if (zero) {
+        input_err("Group order is zero");
+    }
+
+    auto group_order_limbs = num_units_for_group_order(order);
+
+    deserializer.advance(mod_byte_len, "Input is not long enough to read Fp2 non-residue");
+    deserializer.advance(mod_byte_len*2, "Input is not long enough to read Fp6/Fp12 non-residue");
+
+    deserialize_pairing_twist_type(deserializer);
+
+    auto x = deserialize_scalar_with_bit_limit(usize(MAX_BLS12_X_BIT_LENGTH), deserializer);
+    auto x_bits = num_bits(x);
+    auto x_hamming = calculate_hamming_weight(x);
+
+    if (is_zero(x)) {
+        input_err("X loop is zero");
+    }
+
+    if (x_hamming > MAX_BLS12_X_HAMMING) {
+        input_err("X has too large hamming weight");
+    }
+
+    deserialize_sign(deserializer);
+
+    auto const num_pairs = deserializer.byte("Input is not long enough to get number of pairs");
+    if (num_pairs == 0)
+    {
+        input_err("Zero pairs encoded");
+    }
+
+    if (deserializer.ended()) {
+        input_err("Input is not long enough");
+    }
+
+
+    struct Bls12CurveData data = {u64(N), group_order_limbs, x_bits, x_hamming, num_pairs};
+
+    return data;
+}
+
+template <usize N>
+BnCurveData parse_bn_data(u8 mod_byte_len,  Deserializer &deserializer) {
+    auto const modulus = deserialize_modulus<N>(mod_byte_len, deserializer);
+
+    deserializer.advance(mod_byte_len, "Input is not long enough to read A parameter");
+    deserializer.advance(mod_byte_len, "Input is not long enough to read B parameter");
+    
+    auto order_len = deserialize_group_order_length(deserializer);
+    auto order = deserialize_group_order(order_len, deserializer);
+
+    auto zero = is_zero(order);
+    if (zero) {
+        input_err("Group order is zero");
+    }
+
+    auto group_order_limbs = num_units_for_group_order(order);
+
+    deserializer.advance(mod_byte_len, "Input is not long enough to read Fp2 non-residue");
+    deserializer.advance(mod_byte_len*2, "Input is not long enough to read Fp6/Fp12 non-residue");
+
+    deserialize_pairing_twist_type(deserializer);
+
+    auto u = deserialize_scalar_with_bit_limit(usize(MAX_BN_U_BIT_LENGTH), deserializer);
+    auto u_bits = num_bits(u);
+    auto u_hamming = calculate_hamming_weight(u);
+
+    if (is_zero(u)) {
+        input_err("U loop is zero");
+    }
+
+    auto u_is_negative = deserialize_sign(deserializer);
+
+    std::vector<u64> six_u_plus_2(u);
+    mul_scalar(six_u_plus_2, 6);
+    if (u_is_negative) {
+        sub_scalar(six_u_plus_2, 2);
+    } else {
+        add_scalar(six_u_plus_2, 2);
+    }
+
+    auto six_u_plus_two_bits = num_bits(six_u_plus_2);
+    auto six_u_plus_two_hamming = calculate_hamming_weight(six_u_plus_2);
+
+    if (six_u_plus_two_hamming > MAX_BN_SIX_U_PLUS_TWO_HAMMING) {
+        input_err("X has too large hamming weight");
+    }
+
+    auto const num_pairs = deserializer.byte("Input is not long enough to get number of pairs");
+    if (num_pairs == 0)
+    {
+        input_err("Zero pairs encoded");
+    }
+
+    if (deserializer.ended()) {
+        input_err("Input is not long enough");
+    }
+
+    struct BnCurveData data = {u64(N), group_order_limbs, u_bits, u_hamming, six_u_plus_two_bits, six_u_plus_two_hamming, num_pairs};
+
+    return data;
+}
+
+
 
 template<const unsigned char *data>
 u64 calculate_addition_metering(u64 modulus_limbs) {
@@ -467,6 +623,26 @@ u64 perform_mnt_metering(u8 mod_byte_len, Deserializer deserializer) {
 }
 
 template <usize N>
+u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
+    auto data = parse_bls12_data<N>(mod_byte_len, deserializer);
+    if (deserializer.ended()) {
+        input_err("input is not long enough");
+    }
+
+    return 1;
+}
+
+template <usize N>
+u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
+    auto data = parse_bn_data<N>(mod_byte_len, deserializer);
+    if (deserializer.ended()) {
+        input_err("input is not long enough");
+    }
+
+    return 2;
+}
+
+template <usize N>
 u64 perform_metering(u8 operation, std::optional<u8> curve_type, u8 mod_byte_len, Deserializer deserializer)
 {
     if (curve_type)
@@ -481,10 +657,10 @@ u64 perform_metering(u8 operation, std::optional<u8> curve_type, u8 mod_byte_len
             return perform_mnt_metering<N, 4>(mod_byte_len, deserializer);
         case MNT6:
             return perform_mnt_metering<N, 6>(mod_byte_len, deserializer);
-        // case BLS12:
-        //     return run_pairing_b<BLS12engine<N>>(mod_byte_len, field, MAX_BLS12_X_BIT_LENGTH, deserializer);
-        // case BN:
-        //     return run_pairing_b<BNengine<N>>(mod_byte_len, field, MAX_BN_U_BIT_LENGTH, deserializer);
+        case BLS12:
+            return perform_bls12_metering<N>(mod_byte_len, deserializer);
+        case BN:
+            return perform_bn_metering<N>(mod_byte_len, deserializer);
         default:
             input_err(stringf("invalid curve type %u", curve_type_value));
         }
@@ -516,9 +692,8 @@ u64 perform_metering(u8 operation, std::optional<u8> curve_type, u8 mod_byte_len
                 {
                     return 1;
                 }
-                break;
             default:
-                break;
+                input_err("Unknown operation");
         }
     }
 }

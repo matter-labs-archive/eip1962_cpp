@@ -1,6 +1,7 @@
 #ifndef H_DESERIALIZATION
 #define H_DESERIALIZATION
 
+#include "features.h"
 #include "common.h"
 #include "repr.h"
 #include "field.h"
@@ -309,7 +310,9 @@ CurvePoint<F> deserialize_curve_point(u8 mod_byte_len, C const &field, Weierstra
 
     if (!cp.check_on_curve(wc))
     {
-        input_err("Point is not on curve");
+        if (!in_fuzzing()) {
+            input_err("Point is not on curve");
+        }
     }
 
     return cp;
@@ -334,7 +337,9 @@ std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<F>>> deserialize_points(u8 
 
         if (!g1.check_correct_subgroup(g1_curve, field) || !g2.check_correct_subgroup(g2_curve, field))
         {
-            input_err("G1 or G2 point is not in the expected subgroup");
+            if (!in_fuzzing()) {
+                input_err("G1 or G2 point is not in the expected subgroup");
+            }
         }
 
         if (!g1.is_zero() && !g2.is_zero()) {

@@ -206,6 +206,21 @@ void add_scalar(std::vector<u64> &repr, u64 value)
     }
 }
 
+void sub_scalar(std::vector<u64> &repr, u64 value)
+{
+    for (usize i = 0; value > 0; i++)
+    {
+        if (i >= repr.size())
+        {
+            input_err("overflowing subtraction");
+            // repr.push_back(value);
+            // break;
+        }
+
+        repr[i] = sbb(repr[i], value, value);
+    }
+}
+
 void mul_scalar(std::vector<u64> &repr, const u64 scalar)
 {
     u64 carry = 0;

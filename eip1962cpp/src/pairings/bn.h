@@ -20,7 +20,12 @@ public:
         // Calculate six_u_plus_two
         six_u_plus_2 = this->u;
         mul_scalar(six_u_plus_2, 6);
-        add_scalar(six_u_plus_2, 2);
+        if (this->u_is_negative) {
+            sub_scalar(six_u_plus_2, 2);
+        } else {
+            add_scalar(six_u_plus_2, 2);
+        }
+        
         if (calculate_hamming_weight(six_u_plus_2) > MAX_BN_SIX_U_PLUS_TWO_HAMMING)
         {
             input_err("6*U + 2 has too large hamming weight");
