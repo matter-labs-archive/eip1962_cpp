@@ -19,6 +19,13 @@ uint32_t c_perform_operation(char op,
 
 int meter_gas(const char *i, uint32_t i_len, uint64_t *gas);
 
+uint32_t c_meter_operation(char op,
+                             const char *i,
+                             uint32_t i_len,
+                             uint64_t *gas,
+                             char *err,
+                             uint32_t *char_len);
+
 #ifdef __cplusplus
 }
 #endif
