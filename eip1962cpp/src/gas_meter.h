@@ -5,9 +5,7 @@
 #include <vector>
 #include <string>
 
-#include "constants.h"
 #include "operation.h"
-#include "deserialization.h"
 
 // Main API function for ABI.
 std::variant<u64, std::basic_string<char>> meter(std::vector<std::uint8_t> const &input);
