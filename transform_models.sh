@@ -1,0 +1,21 @@
+#!/bin/sh
+echo 'static ' > eip1962cpp/src/g1_addition.h
+xxd -i models/g1_addition.json >> eip1962cpp/src/g1_addition.h
+echo 'static ' > eip1962cpp/src/g2_addition_ext2.h
+xxd -i models/g2_addition_ext2.json >> eip1962cpp/src/g2_addition_ext2.h
+echo 'static ' > eip1962cpp/src/g2_addition_ext3.h
+xxd -i models/g2_addition_ext3.json >> eip1962cpp/src/g2_addition_ext3.h
+echo 'static ' > eip1962cpp/src/g1_multiplication.h
+xxd -i models/g1_multiplication.json >> eip1962cpp/src/g1_multiplication.h
+echo 'static ' > eip1962cpp/src/g2_multiplication_ext2.h
+xxd -i models/g2_multiplication_ext2.json >> eip1962cpp/src/g2_multiplication_ext2.h
+echo 'static ' > eip1962cpp/src/g2_multiplication_ext3.h
+xxd -i models/g2_multiplication_ext3.json >> eip1962cpp/src/g2_multiplication_ext3.h
+echo 'static ' > eip1962cpp/src/bls12_model.h
+xxd -i models/bls12_model.json >> eip1962cpp/src/bls12_model.h
+echo 'static ' > eip1962cpp/src/bn_model.h
+xxd -i models/bn_model.json >> eip1962cpp/src/bn_model.h
+echo 'static ' > eip1962cpp/src/mnt4_model.h
+xxd -i models/mnt4_model.json >> eip1962cpp/src/mnt4_model.h
+echo 'static ' > eip1962cpp/src/mnt6_model.h
+xxd -i models/mnt6_model.json >> eip1962cpp/src/mnt6_model.h

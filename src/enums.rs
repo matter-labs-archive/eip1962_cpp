@@ -13,7 +13,7 @@ pub const MNT6PAIR_OPERATION_RAW_VALUE: u8 = OperationType::MNT6PAIR as u8;
 
 
 #[repr(u8)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OperationType {
     G1ADD = 1,
     G1MUL = 2,

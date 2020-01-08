@@ -1,11 +1,22 @@
 #include "constants.h"
+#include "gas_meter.h"
 #include "deserialization.h"
 #include "repr.h"
-#include "gas_meter.h"
 
 #include <fstream>
 
 #include "json/json.hh"
+
+#include "g1_addition.h"
+#include "g2_addition_ext2.h"
+#include "g2_addition_ext3.h"
+#include "g1_multiplication.h"
+#include "g2_multiplication_ext2.h"
+#include "g2_multiplication_ext3.h"
+#include "bls12_model.h"
+#include "bn_model.h"
+#include "mnt4_model.h"
+#include "mnt6_model.h"
 
 /*
 Execution path goes run -> meter_limbed -> perform_metering -> {...}
@@ -25,7 +36,7 @@ using json = nlohmann::json;
 //   ThreadSafeSingleton& operator=(const ThreadSafeSingleton&)= delete;
 // };
 
-template<const char *filename>
+template<const unsigned char *data>
 class AdditionParameters {
 public:
   static AdditionParameters& getInstance() {
@@ -36,12 +47,11 @@ public:
     std::unordered_map<u64, u64> prices;
 private:
     AdditionParameters() {
-        std::ifstream json_data_stream(filename);
-        json prices_json;
-        json_data_stream >> prices_json;
-        std::vector<std::vector<u64>> all_prices = prices_json["price"];
+        auto prices_json = json::parse(reinterpret_cast<const char*>(data));
+        std::vector<std::pair<u64, u64>> all_prices = prices_json["price"];
         for(auto const& pair: all_prices) {
-            prices.emplace(pair.at(0), pair.at(1));
+            prices.emplace(std::get<0>(pair), std::get<1>(pair));
+            // prices.emplace(pair.at(0), pair.at(1));
         }
     }
     ~AdditionParameters()= default;
@@ -49,7 +59,7 @@ private:
     AdditionParameters& operator=(const AdditionParameters&)= delete;
 };
 
-template<const char *filename>
+template<const unsigned char *data>
 class MultiplicationParameters {
 public:
   static MultiplicationParameters& getInstance() {
@@ -61,16 +71,16 @@ public:
     std::unordered_map<u64, u64> price_per_order_limb;
 private:
     MultiplicationParameters() {
-        std::ifstream json_data_stream(filename);
-        json prices_json;
-        json_data_stream >> prices_json;
-        std::vector<std::vector<u64>> base_prices_vec = prices_json["base"];
-        std::vector<std::vector<u64>> per_limb_prices_vec = prices_json["per_limb"];
+        auto prices_json = json::parse(reinterpret_cast<const char*>(data));
+        std::vector<std::pair<u64, u64>> base_prices_vec = prices_json["base"];
+        std::vector<std::pair<u64, u64>> per_limb_prices_vec = prices_json["per_limb"];
         for(auto const& pair: base_prices_vec) {
-            base_prices.emplace(pair.at(0), pair.at(1));
+            base_prices.emplace(std::get<0>(pair), std::get<1>(pair));
+            // base_prices.emplace(pair.at(0), pair.at(1));
         }
         for(auto const& pair: per_limb_prices_vec) {
-            price_per_order_limb.emplace(pair.at(0), pair.at(1));
+            price_per_order_limb.emplace(std::get<0>(pair), std::get<1>(pair));
+            // price_per_order_limb.emplace(pair.at(0), pair.at(1));
         }
     }
     ~MultiplicationParameters()= default;
@@ -78,34 +88,63 @@ private:
     MultiplicationParameters& operator=(const MultiplicationParameters&)= delete;
 };
 
-static const char g1_addition_params_filename[] = "g1_addition.json";
-static const char g2_ext2_addition_params_filename[] = "g2_addition_ext2.json";
-static const char g2_ext3_addition_params_filename[] = "g2_addition_ext3.json";
-
-static const char g1_multiplication_params_filename[] = "g1_multiplication.json";
-static const char g2_ext2_multiplication_params_filename[] = "g2_multiplication_ext2.json";
-static const char g2_ext3_multiplication_params_filename[] = "g2_multiplication_ext3.json";
-
-bool is_zero_dyn_number(const std::vector<u64> &num) {
-    auto zero = true;
-    for (auto it = num.cbegin(); it != num.cend(); it++)
-    {
-        zero &= *it == 0;
+template<const unsigned char *data, usize MAX>
+class MntParameters {
+public:
+  static MntParameters& getInstance() {
+    static MntParameters instance;
+    return instance;
+  }
+    std::unordered_map<u64, u64> one_off;
+    u64 multiplier;
+    std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller;
+    std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp;
+private:
+    MntParameters() {
+        auto prices_json = json::parse(reinterpret_cast<const char*>(data));
+        // std::vector<std::vector<u64>> one_off_prices_vec = prices_json["one_off"];
+        std::vector<std::pair<u64, u64>> one_off_prices_vec = prices_json["one_off"];
+        std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller_prices_vec = prices_json["miller"];
+        std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp_prices_vec = prices_json["final_exp"];
+        // std::cout << miller_prices_vec << std::endl;
+        for(auto const& pair: one_off_prices_vec) {
+            one_off.emplace(std::get<0>(pair), std::get<1>(pair));
+            // one_off.emplace(pair.at(0), pair.at(1));
+        }
+        miller = miller_prices_vec;
+        final_exp = final_exp_prices_vec;
+        // miller = prices_json["miller"];
+        // final_exp = prices_json["final_exp"];
+        multiplier = prices_json["multiplier"];
     }
+    ~MntParameters()= default;
+    MntParameters(const MntParameters&)= delete;
+    MntParameters& operator=(const MntParameters&)= delete;
+};
 
-    return zero;
-}
 
-template <usize N>
 struct G1G2CurveData {
-    Repr<N> modulus;
-    std::vector<u64> order;
+    u64 modulus_limbs;
+    u64 group_order_limbs;
     bool in_extension;
     usize extension_degree;
 };
 
+template <usize EXT>
+struct MntCurveData {
+    u64 modulus_limbs;
+    u64 group_order_limbs;
+    u64 ate_loop_bits;
+    u64 ate_loop_hamming;
+    u64 w0_bits;
+    u64 w0_hamming;
+    u64 w1_bits;
+    u64 w1_hamming;
+    u64 num_pairs;
+};
+
 template <usize N>
-G1G2CurveData<N> parse_curve_data(u8 mod_byte_len,  Deserializer &deserializer, bool in_extension) {
+G1G2CurveData parse_curve_data(u8 mod_byte_len,  Deserializer &deserializer, bool in_extension) {
     auto const modulus = deserialize_modulus<N>(mod_byte_len, deserializer);
 
     usize extension_degree = 1;
@@ -130,35 +169,89 @@ G1G2CurveData<N> parse_curve_data(u8 mod_byte_len,  Deserializer &deserializer, 
         input_err("Group order is zero");
     }
 
-    struct G1G2CurveData<N> data = {modulus, order, in_extension, extension_degree};
+    auto group_order_limbs = num_units_for_group_order(order);
+
+    struct G1G2CurveData data = {u64(N), group_order_limbs, in_extension, extension_degree};
 
     return data;
 }
 
-template<const char *filename>
-u64 calculate_addition_metering(u64 modulus_limbs) {
-    // std::unordered_map<u64,u64>::const_iterator
-    auto price = AdditionParameters<filename>::getInstance().prices.find(modulus_limbs);
-    if (price == AdditionParameters<filename>::getInstance().prices.end() ){
-        input_err("invalid number of limbs");
-    }    
-    else {
-        return price->second;
+template <usize N, usize EXT>
+MntCurveData<EXT> parse_mnt_data(u8 mod_byte_len,  Deserializer &deserializer) {
+    auto const modulus = deserialize_modulus<N>(mod_byte_len, deserializer);
+
+    deserializer.advance(mod_byte_len, "Input is not long enough to read A parameter");
+    deserializer.advance(mod_byte_len, "Input is not long enough to read B parameter");
+    
+    auto order_len = deserialize_group_order_length(deserializer);
+    auto order = deserialize_group_order(order_len, deserializer);
+
+    auto zero = is_zero(order);
+    if (zero) {
+        input_err("Group order is zero");
     }
+
+    auto group_order_limbs = num_units_for_group_order(order);
+
+    deserializer.advance(mod_byte_len, "Input is not long enough to read non-residue");
+
+    auto ate_loop = deserialize_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_ATE_LOOP_COUNT_HAMMING), deserializer);
+    auto ate_bits = num_bits(ate_loop);
+    auto ate_hamming = calculate_hamming_weight(ate_loop);
+
+    if (is_zero(ate_loop)) {
+        input_err("Ate pairing loop is zero");
+    }
+
+    if (ate_hamming > MAX_ATE_PAIRING_ATE_LOOP_COUNT_HAMMING) {
+        input_err("Ate pairing loop has too large hamming weight");
+    }
+
+    deserialize_sign(deserializer);
+
+    auto w0 = deserialize_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH), deserializer);
+    auto w0_bits = num_bits(w0);
+    auto w0_hamming = calculate_hamming_weight(w0);
+
+    if (is_zero(w0)) {
+        input_err("W0 is zero");
+    }
+
+    auto w1 = deserialize_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH), deserializer);
+    auto w1_bits = num_bits(w1);
+    auto w1_hamming = calculate_hamming_weight(w1);
+
+    if (is_zero(w1)) {
+        input_err("W0 is zero");
+    }
+
+    deserialize_sign(deserializer);
+
+    auto const num_pairs = deserializer.byte("Input is not long enough to get number of pairs");
+    if (num_pairs == 0)
+    {
+        input_err("Zero pairs encoded");
+    }
+
+    if (deserializer.ended()) {
+        input_err("Input is not long enough");
+    }
+
+
+    struct MntCurveData<EXT> data = {u64(N), group_order_limbs, ate_bits, ate_hamming, w0_bits, w0_hamming, w1_bits, w1_hamming, num_pairs};
+
+    return data;
 }
 
-u32 leading_zero(u64 x)
-{
-    unsigned n = 0;
-    if (x == 0)
-        return 64;
-    constexpr auto top = u64(1) << 63;
-    while (x < top)
-    {
-        n++;
-        x <<= 1;
-    }
-    return n;
+template<const unsigned char *data>
+u64 calculate_addition_metering(u64 modulus_limbs) {
+    // std::unordered_map<u64,u64>::const_iterator
+    auto price = AdditionParameters<data>::getInstance().prices.find(modulus_limbs);
+    if (price == AdditionParameters<data>::getInstance().prices.end() ){
+        input_err("invalid number of limbs");
+    }    
+
+    return price->second;
 }
 
 u64 checked_mul(u64 a, u64 b) {
@@ -181,22 +274,143 @@ u64 checked_add(u64 a, u64 b) {
     return a + b;
 }
 
-template<const char *filename>
+std::vector<u64> make_powers(u64 value, u64 max_power) {
+    std::vector<u64> powers;
+    powers.reserve(max_power);
+    u64 p = 1;
+    for (auto i = 0; i < max_power; i++) {
+        p = checked_mul(p, value);
+        powers.emplace_back(p);
+    }
+
+    return powers;
+}
+
+u64 eval_model(
+    const std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> &coeffs_variables_and_powers, 
+    const std::vector<std::vector<u64>> &variables)
+{
+    u64 final_result = 0;
+    if (coeffs_variables_and_powers.empty()) {
+        input_err("missing model values");
+    }
+
+    usize max_var_id = 0;
+
+    for(auto const& tup: coeffs_variables_and_powers) {
+        for (auto const& var_and_power: std::get<1>(tup)) {
+            if (max_var_id < std::get<0>(var_and_power)) {
+                max_var_id = std::get<0>(var_and_power);
+            }
+        }
+    }
+
+    if (max_var_id + 1 != variables.size()) {
+        input_err("discrepancy in model and number of variables");
+    }
+
+    for(auto const& tup: coeffs_variables_and_powers) {
+        u64 subpart = std::get<0>(tup);
+        for (auto const& var_and_power: std::get<1>(tup)) {
+            auto variable = std::get<0>(var_and_power);
+            auto power = std::get<1>(var_and_power);
+            auto variable_powers = variables.at(variable);
+            auto variable_powers_value = variable_powers.at(power - 1);
+            subpart = checked_mul(subpart, variable_powers_value);
+        }
+        final_result = checked_add(final_result, subpart);
+    }
+
+    return final_result;
+}
+
+template<const unsigned char *data>
 u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs) {
     // std::unordered_map<u64,u64>::const_iterator
-    auto base_price = MultiplicationParameters<filename>::getInstance().base_prices.find(modulus_limbs);
-    if (base_price == MultiplicationParameters<filename>::getInstance().base_prices.end() ){
+    auto base_price = MultiplicationParameters<data>::getInstance().base_prices.find(modulus_limbs);
+    if (base_price == MultiplicationParameters<data>::getInstance().base_prices.end() ){
         input_err("invalid number of limbs");
     }    
-    auto per_limb_price = MultiplicationParameters<filename>::getInstance().price_per_order_limb.find(modulus_limbs);
-    if (per_limb_price == MultiplicationParameters<filename>::getInstance().price_per_order_limb.end() ){
+    auto per_limb_price = MultiplicationParameters<data>::getInstance().price_per_order_limb.find(modulus_limbs);
+    if (per_limb_price == MultiplicationParameters<data>::getInstance().price_per_order_limb.end() ){
         input_err("invalid number of limbs");
     }    
-    else {
-        u64 result = checked_mul(group_order_limbs, per_limb_price->second);
-        result = checked_add(result, base_price->second);
-        return result;
-    }
+
+    u64 result = checked_mul(group_order_limbs, per_limb_price->second);
+    result = checked_add(result, base_price->second);
+    return result;
+}
+
+template<const unsigned char *data, usize EXT, usize MAX>
+u64 calculate_mnt_metering(MntCurveData<EXT> curve_data) {
+    u64 final_result = 0;
+
+    // std::unordered_map<u64,u64>::const_iterator
+    auto one_off_price = MntParameters<data, MAX>::getInstance().one_off.find(curve_data.modulus_limbs);
+    if (one_off_price == MntParameters<data, MAX>::getInstance().one_off.end()){
+        input_err("invalid number of limbs");
+    }    
+
+    u64 multiplier = MntParameters<data, MAX>::getInstance().multiplier;
+
+    auto miller_price_model = MntParameters<data, MAX>::getInstance().miller;
+ 
+    auto final_ext_price_model = MntParameters<data, MAX>::getInstance().final_exp; 
+
+    final_result = checked_add(final_result, one_off_price->second); 
+
+    auto modulus_limbs_powers = make_powers(curve_data.modulus_limbs, u64(MAX));
+
+    std::vector<std::vector<u64>> miller_params;
+    miller_params.reserve(4);
+
+    std::vector<u64> group_order_limbs;
+    group_order_limbs.emplace_back(curve_data.group_order_limbs);
+
+    std::vector<u64> ate_loop_bits;
+    ate_loop_bits.emplace_back(curve_data.ate_loop_bits);
+
+    std::vector<u64> ate_loop_hamming;
+    ate_loop_hamming.emplace_back(curve_data.ate_loop_hamming);
+
+    miller_params.emplace_back(group_order_limbs);
+    miller_params.emplace_back(ate_loop_bits);
+    miller_params.emplace_back(ate_loop_hamming);
+    miller_params.emplace_back(modulus_limbs_powers);
+
+    u64 miller_cost = eval_model(miller_price_model, miller_params);
+    miller_cost = checked_mul(miller_cost, curve_data.num_pairs);
+
+    final_result = checked_add(final_result, miller_cost);
+
+    std::vector<std::vector<u64>> final_exp_params;
+    final_exp_params.reserve(5);
+
+    std::vector<u64> w0_bits;
+    w0_bits.emplace_back(curve_data.w0_bits);
+
+    std::vector<u64> w0_hamming;
+    w0_hamming.emplace_back(curve_data.w0_hamming);
+
+    std::vector<u64> w1_bits;
+    w1_bits.emplace_back(curve_data.w1_bits);
+
+    std::vector<u64> w1_hamming;
+    w1_hamming.emplace_back(curve_data.w1_hamming);
+
+    final_exp_params.emplace_back(w0_bits);
+    final_exp_params.emplace_back(w0_hamming);
+    final_exp_params.emplace_back(w1_bits);
+    final_exp_params.emplace_back(w1_hamming);
+    final_exp_params.emplace_back(modulus_limbs_powers);
+
+    u64 final_exp_cost = eval_model(final_ext_price_model, final_exp_params);
+
+    final_result = checked_add(final_result, final_exp_cost);
+
+    final_result = final_result / multiplier;
+
+    return final_result;
 }
 
 template <usize N>
@@ -205,13 +419,14 @@ u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool i
     if (deserializer.ended()) {
         input_err("input is not long enough");
     }
+    
     switch (data.extension_degree) {
         case 1:
-            return calculate_addition_metering<g1_addition_params_filename>(u64(N));
+            return calculate_addition_metering<models_g1_addition_json>(u64(N));
         case 2:
-            return calculate_addition_metering<g2_ext2_addition_params_filename>(u64(N));
+            return calculate_addition_metering<models_g2_addition_ext2_json>(u64(N));
         case 3:
-            return calculate_addition_metering<g2_ext3_addition_params_filename>(u64(N));
+            return calculate_addition_metering<models_g2_addition_ext3_json>(u64(N));
     }
     input_err("unknown extension degree");
 }
@@ -222,16 +437,33 @@ u64 perform_multiplication_metering(u8 mod_byte_len, Deserializer deserializer, 
     if (deserializer.ended()) {
         input_err("input is not long enough");
     }
-    auto group_order_limbs = num_units_for_group_order(data.order);
+
     switch (data.extension_degree) {
         case 1:
-            return calculate_multiplication_metering<g1_multiplication_params_filename>(u64(N), group_order_limbs);
+            return calculate_multiplication_metering<models_g1_multiplication_json>(u64(N), data.group_order_limbs);
         case 2:
-            return calculate_multiplication_metering<g2_ext2_multiplication_params_filename>(u64(N), group_order_limbs);
+            return calculate_multiplication_metering<models_g2_multiplication_ext2_json>(u64(N), data.group_order_limbs);
         case 3:
-            return calculate_multiplication_metering<g2_ext3_multiplication_params_filename>(u64(N), group_order_limbs);
+            return calculate_multiplication_metering<models_g2_multiplication_ext3_json>(u64(N), data.group_order_limbs);
     }
     input_err("unknown extension degree");
+}
+
+template <usize N, usize EXT>
+u64 perform_mnt_metering(u8 mod_byte_len, Deserializer deserializer) {
+    auto data = parse_mnt_data<N, EXT>(mod_byte_len, deserializer);
+    if (deserializer.ended()) {
+        input_err("input is not long enough");
+    }
+
+    switch (EXT) {
+        case 4:
+            return calculate_mnt_metering<models_mnt4_model_json, EXT, 4>(data);
+        case 6:
+            return calculate_mnt_metering<models_mnt6_model_json, EXT, 6>(data);
+        default:
+            input_err("unknown MNT curve type");
+    }
 }
 
 template <usize N>
@@ -245,10 +477,10 @@ u64 perform_metering(u8 operation, std::optional<u8> curve_type, u8 mod_byte_len
         auto const curve_type_value = curve_type.value();
         switch (curve_type_value)
         {
-        // case MNT4:
-        //     return meter_pairing_mnt4<N>(mod_byte_len, field, 2, deserializer);
-        // case MNT6:
-        //     return run_pairing_mnt<Fp3<N>, Fp6_2<N>, FieldExtension2over3<N>, FieldExtension3<N>, MNT6engine<N>>(mod_byte_len, field, 3, deserializer);
+        case MNT4:
+            return perform_mnt_metering<N, 4>(mod_byte_len, deserializer);
+        case MNT6:
+            return perform_mnt_metering<N, 6>(mod_byte_len, deserializer);
         // case BLS12:
         //     return run_pairing_b<BLS12engine<N>>(mod_byte_len, field, MAX_BLS12_X_BIT_LENGTH, deserializer);
         // case BN:
