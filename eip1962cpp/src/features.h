@@ -1,5 +1,5 @@
-#ifndef H_ELEMENT
-#define H_ELEMENT
+#ifndef H_FEATURES
+#define H_FEATURES
 
 bool in_fuzzing() {
     #ifdef FUZZING
