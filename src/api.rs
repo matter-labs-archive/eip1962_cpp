@@ -26,5 +26,15 @@ extern "C" {
         o_len: *mut u32,
         err: *mut ::std::os::raw::c_char,
         char_len: *mut u32,
-    ) -> ::std::os::raw::c_int;
+    ) -> u32;
+}
+extern "C" {
+    pub fn c_meter_operation(
+        op: ::std::os::raw::c_char,
+        i: *const ::std::os::raw::c_char,
+        i_len: u32,
+        gas: *mut u64,
+        err: *mut ::std::os::raw::c_char,
+        char_len: *mut u32,
+    ) -> u32;
 }

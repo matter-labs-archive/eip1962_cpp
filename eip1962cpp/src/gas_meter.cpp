@@ -3,6 +3,8 @@
 #include "repr.h"
 #include "gas_meter.h"
 
+#include <fstream>
+
 #include "json/json.hh"
 
 /*
@@ -12,6 +14,49 @@ Main way of transferring errors originating from input is through exceptions whi
 
 There are no magic/hacks here, only templates.
 */
+
+using json = nlohmann::json;
+
+// class ThreadSafeSingleton{
+// private:
+//   ThreadSafeSingleton()= default;
+//   ~ThreadSafeSingleton()= default;
+//   ThreadSafeSingleton(const ThreadSafeSingleton&)= delete;
+//   ThreadSafeSingleton& operator=(const ThreadSafeSingleton&)= delete;
+// };
+
+// class AdditionParameters: ThreadSafeSingleton {
+
+template<const char *filename>
+class AdditionParameters {
+public:
+  static AdditionParameters& getInstance() {
+    static AdditionParameters instance;
+    return instance;
+  }
+
+    std::unordered_map<u64, u64> prices;
+private:
+    AdditionParameters() {
+        // std::fstream fs;
+        // fs.open (filename, std::fstream::in);
+
+        std::ifstream json_data_stream(filename);
+        json prices_json;
+        json_data_stream >> prices_json;
+        std::vector<std::vector<u64>> all_prices = prices_json["price"];
+        for(auto const& pair: all_prices) {
+            prices.emplace(pair.at(0), pair.at(1));
+        }
+    }
+    ~AdditionParameters()= default;
+    AdditionParameters(const AdditionParameters&)= delete;
+    AdditionParameters& operator=(const AdditionParameters&)= delete;
+};
+
+static const char g1_addition_params_filename[] = "g1_addition.json";
+static const char g2_ext2_addition_params_filename[] = "g2_addition_ext2.json";
+static const char g2_ext3_addition_params_filename[] = "g2_addition_ext3.json";
 
 bool is_zero_dyn_number(const std::vector<u64> &num) {
     auto zero = true;
@@ -65,15 +110,33 @@ G1G2CurveData<N> parse_curve_data(u8 mod_byte_len,  Deserializer &deserializer, 
     return data;
 }
 
+template<const char *filename>
 u64 calculate_addition_metering(u64 modulus_limbs) {
-    return 123;
+    // std::unordered_map<u64,u64>::const_iterator
+    auto price = AdditionParameters<filename>::getInstance().prices.find(modulus_limbs);
+    if (price == AdditionParameters<filename>::getInstance().prices.end() ){
+        input_err("invalid number of limbs");
+    }    
+    else {
+        return price->second;
+    }
 }
 
 template <usize N>
 u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
     auto data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
-
-    return calculate_addition_metering(u64(N));
+    if (deserializer.ended()) {
+        input_err("input is not long enough");
+    }
+    switch (data.extension_degree) {
+        case 1:
+            return calculate_addition_metering<g1_addition_params_filename>(u64(N));
+        case 2:
+            return calculate_addition_metering<g2_ext2_addition_params_filename>(u64(N));
+        case 3:
+            return calculate_addition_metering<g2_ext3_addition_params_filename>(u64(N));
+    }
+    input_err("unknown extension degree");
 }
 
 template <usize N>
