@@ -158,7 +158,7 @@ u8 inline deserialize_pairing_curve_type(Deserializer &deserializer)
     return curve_byte;
 }
 
-TwistType deserialize_pairing_twist_type(Deserializer &deserializer)
+TwistType inline deserialize_pairing_twist_type(Deserializer &deserializer)
 {
     auto const twist_byte = deserializer.byte("Input is not long enough to get twist type");
     switch (twist_byte)
