@@ -1,7 +1,7 @@
 #ifndef H_FEATURES
 #define H_FEATURES
 
-bool in_fuzzing() {
+bool inline in_fuzzing() {
     #ifdef FUZZING
     return true;
     #else
