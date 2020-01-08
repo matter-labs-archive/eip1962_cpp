@@ -33,7 +33,7 @@ fn main() {
             .file("eip1962cpp/src/wrapper.cpp")
             .file("eip1962cpp/src/repr.cpp")
             .file("eip1962cpp/src/gas_meter.cpp")
-            .file("eip1962cpp/src/deserialization.cpp")
+            // .file("eip1962cpp/src/deserialization.cpp")
             .warnings(false)
             .static_flag(true)
             // .opt_level_str("3")
