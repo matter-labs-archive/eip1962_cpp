@@ -124,7 +124,6 @@ pub fn perform_operation(operation: OperationType, bytes: &[u8]) -> Result<Vec<u
 pub fn meter_operation(operation: OperationType, bytes: &[u8]) -> Result<u64, String> {
     let raw_operation_value: std::os::raw::c_char = unsafe { std::mem::transmute(operation.as_u8()) };
 
-    let mut result = vec![0u8; MAX_OUTPUT_LEN];
     let mut error_description_buffer = vec![0u8; ERROR_DESCRIPTION_LEN];
     let input = bytes.as_ptr() as *const std::os::raw::c_char;
     let error_buffer = error_description_buffer.as_mut_ptr() as *mut std::os::raw::c_char;

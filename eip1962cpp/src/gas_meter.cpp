@@ -38,9 +38,6 @@ public:
     std::unordered_map<u64, u64> prices;
 private:
     AdditionParameters() {
-        // std::fstream fs;
-        // fs.open (filename, std::fstream::in);
-
         std::ifstream json_data_stream(filename);
         json prices_json;
         json_data_stream >> prices_json;
@@ -54,9 +51,42 @@ private:
     AdditionParameters& operator=(const AdditionParameters&)= delete;
 };
 
+template<const char *filename>
+class MultiplicationParameters {
+public:
+  static MultiplicationParameters& getInstance() {
+    static MultiplicationParameters instance;
+    return instance;
+  }
+
+    std::unordered_map<u64, u64> base_prices;
+    std::unordered_map<u64, u64> price_per_order_limb;
+private:
+    MultiplicationParameters() {
+        std::ifstream json_data_stream(filename);
+        json prices_json;
+        json_data_stream >> prices_json;
+        std::vector<std::vector<u64>> base_prices_vec = prices_json["base"];
+        std::vector<std::vector<u64>> per_limb_prices_vec = prices_json["per_limb"];
+        for(auto const& pair: base_prices_vec) {
+            base_prices.emplace(pair.at(0), pair.at(1));
+        }
+        for(auto const& pair: per_limb_prices_vec) {
+            price_per_order_limb.emplace(pair.at(0), pair.at(1));
+        }
+    }
+    ~MultiplicationParameters()= default;
+    MultiplicationParameters(const MultiplicationParameters&)= delete;
+    MultiplicationParameters& operator=(const MultiplicationParameters&)= delete;
+};
+
 static const char g1_addition_params_filename[] = "g1_addition.json";
 static const char g2_ext2_addition_params_filename[] = "g2_addition_ext2.json";
 static const char g2_ext3_addition_params_filename[] = "g2_addition_ext3.json";
+
+static const char g1_multiplication_params_filename[] = "g1_multiplication.json";
+static const char g2_ext2_multiplication_params_filename[] = "g2_multiplication_ext2.json";
+static const char g2_ext3_multiplication_params_filename[] = "g2_multiplication_ext3.json";
 
 bool is_zero_dyn_number(const std::vector<u64> &num) {
     auto zero = true;
@@ -88,20 +118,17 @@ G1G2CurveData<N> parse_curve_data(u8 mod_byte_len,  Deserializer &deserializer, 
             input_err("Invalid extension degree");
         }
         extension_degree = usize(decoded_ext_degree);
-        deserializer.dyn_number(mod_byte_len, "Input is not long enough to read non-residue");
+        deserializer.advance(mod_byte_len, "Input is not long enough to read non-residue");
     }
 
-    deserializer.dyn_number(mod_byte_len, "Input is not long enough to read A parameter");
-    deserializer.dyn_number(mod_byte_len, "Input is not long enough to read B parameter");
+    deserializer.advance(mod_byte_len, "Input is not long enough to read A parameter");
+    deserializer.advance(mod_byte_len, "Input is not long enough to read B parameter");
     
-    auto order_len = deserializer.byte("Input is not long enough to get group size length");
-    if (order_len > MAX_GROUP_BYTE_LEN) {
-        input_err("Group order length is too large");
-    }
-    auto const order = deserializer.dyn_number(order_len, "Input is not long enough to get main group order size");
+    auto order_len = deserialize_group_order_length(deserializer);
+    auto order = deserialize_group_order(order_len, deserializer);
 
-    auto order_is_zero = is_zero_dyn_number(order);
-    if (order_is_zero) {
+    auto zero = is_zero(order);
+    if (zero) {
         input_err("Group order is zero");
     }
 
@@ -122,6 +149,58 @@ u64 calculate_addition_metering(u64 modulus_limbs) {
     }
 }
 
+u32 leading_zero(u64 x)
+{
+    unsigned n = 0;
+    if (x == 0)
+        return 64;
+    constexpr auto top = u64(1) << 63;
+    while (x < top)
+    {
+        n++;
+        x <<= 1;
+    }
+    return n;
+}
+
+u64 checked_mul(u64 a, u64 b) {
+    auto bits_a = 64 - leading_zero(a);
+    auto bits_b = 64 - leading_zero(b);
+    if (bits_a + bits_b > 64) {
+        input_err("overflow");
+    }
+
+    return a * b;
+}
+
+u64 checked_add(u64 a, u64 b) {
+    auto bits_a = 64 - leading_zero(a);
+    auto bits_b = 64 - leading_zero(b);
+    if (bits_a > 63 || bits_b > 63) {
+        input_err("overflow");
+    }
+
+    return a + b;
+}
+
+template<const char *filename>
+u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs) {
+    // std::unordered_map<u64,u64>::const_iterator
+    auto base_price = MultiplicationParameters<filename>::getInstance().base_prices.find(modulus_limbs);
+    if (base_price == MultiplicationParameters<filename>::getInstance().base_prices.end() ){
+        input_err("invalid number of limbs");
+    }    
+    auto per_limb_price = MultiplicationParameters<filename>::getInstance().price_per_order_limb.find(modulus_limbs);
+    if (per_limb_price == MultiplicationParameters<filename>::getInstance().price_per_order_limb.end() ){
+        input_err("invalid number of limbs");
+    }    
+    else {
+        u64 result = checked_mul(group_order_limbs, per_limb_price->second);
+        result = checked_add(result, base_price->second);
+        return result;
+    }
+}
+
 template <usize N>
 u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
     auto data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
@@ -135,6 +214,24 @@ u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool i
             return calculate_addition_metering<g2_ext2_addition_params_filename>(u64(N));
         case 3:
             return calculate_addition_metering<g2_ext3_addition_params_filename>(u64(N));
+    }
+    input_err("unknown extension degree");
+}
+
+template <usize N>
+u64 perform_multiplication_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
+    auto data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
+    if (deserializer.ended()) {
+        input_err("input is not long enough");
+    }
+    auto group_order_limbs = num_units_for_group_order(data.order);
+    switch (data.extension_degree) {
+        case 1:
+            return calculate_multiplication_metering<g1_multiplication_params_filename>(u64(N), group_order_limbs);
+        case 2:
+            return calculate_multiplication_metering<g2_ext2_multiplication_params_filename>(u64(N), group_order_limbs);
+        case 3:
+            return calculate_multiplication_metering<g2_ext3_multiplication_params_filename>(u64(N), group_order_limbs);
     }
     input_err("unknown extension degree");
 }
@@ -177,11 +274,13 @@ u64 perform_metering(u8 operation, std::optional<u8> curve_type, u8 mod_byte_len
                     return perform_addition_metering<N>(mod_byte_len, deserializer, true);
                 }
             case OPERATION_G1_MUL:
+                {
+                    return perform_multiplication_metering<N>(mod_byte_len, deserializer, false);
+                }
             case OPERATION_G2_MUL:
                 {
-                    return 10000;
+                    return perform_multiplication_metering<N>(mod_byte_len, deserializer, true);
                 }
-                break;
             case OPERATION_G1_MULTIEXP:
             case OPERATION_G2_MULTIEXP:
                 {

@@ -19,8 +19,7 @@ public:
     Deserializer(std::vector<std::uint8_t> const &input) : begin(input.cbegin()), end(input.cend()) {}
 
     // Consumes a byte, throws error otherwise
-    u8
-    byte(str &err)
+    u8 byte(str &err)
     {
         if (!ended())
         {
@@ -63,6 +62,14 @@ public:
         num.resize((bytes + sizeof(u64) - 1) / sizeof(u64), 0);
         read(bytes, num, err);
         return num;
+    }
+
+    void advance(u8 bytes, str &err)
+    {
+        for (auto i = 0; i < bytes; i++)
+        {
+            byte(err);
+        }
     }
 
     bool ended() const
@@ -238,6 +245,21 @@ F deserialize_non_residue(u8 mod_byte_len, C const &field, u8 extension_degree, 
 
 // ************************* CURVE deserializers ***************************** //
 
+u8 deserialize_group_order_length(Deserializer &deserializer) {
+    auto order_len = deserializer.byte("Input is not long enough to get group size length");
+    if (order_len > MAX_GROUP_BYTE_LEN) {
+        input_err("Group order length is too large");
+    }
+
+    return order_len;
+}
+
+std::vector<u64> deserialize_group_order(u8 order_len, Deserializer &deserializer) {
+    auto order = deserializer.dyn_number(order_len, "Input is not long enough to get main group order size");
+
+    return order;
+}
+
 template <class F, class C>
 WeierstrassCurve<F> deserialize_weierstrass_curve(u8 mod_byte_len, C const &field, Deserializer &deserializer, bool a_must_be_zero)
 {
@@ -253,23 +275,29 @@ WeierstrassCurve<F> deserialize_weierstrass_curve(u8 mod_byte_len, C const &fiel
         input_err("curve shape is not supported");
     }
 
-    auto order_len = deserializer.byte("Input is not long enough to get group size length");
-    if (order_len > MAX_GROUP_BYTE_LEN) {
-        input_err("Group order length is too large");
-    }
-    auto order = deserializer.dyn_number(order_len, "Input is not long enough to get main group order size");
+    auto order_len = deserialize_group_order_length(deserializer);
+    auto order = deserialize_group_order(order_len, deserializer);
 
-    auto zero = true;
-    for (auto it = order.cbegin(); it != order.cend(); it++)
-    {
-        zero &= *it == 0;
-    }
+    auto zero = is_zero(order);
     if (zero)
     {
         input_err("Group order is zero");
     }
 
     return WeierstrassCurve(a, b, order, order_len);
+}
+
+u64 num_units_for_group_order(const std::vector<u64> &order)
+{
+    auto bits = num_bits(order);
+    auto limbs = (bits + 63) / 64;
+    if (limbs < NUM_GROUP_LIMBS_MIN) {
+        input_err("group order is zero");
+    } else if (limbs > NUM_GROUP_LIMBS_MAX) {
+        input_err("group order is too large");
+    }
+
+    return u64(limbs);
 }
 
 template <class F, class C>
