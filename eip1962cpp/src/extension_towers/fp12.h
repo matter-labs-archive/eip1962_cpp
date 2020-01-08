@@ -13,42 +13,46 @@ class FieldExtension2over3over2 : public FieldExtension3over2<N>
 {
 public:
     std::array<Fp2<N>, 12> frobenius_coeffs_c1;
+    bool frobenius_calculated = false;
 
-    FieldExtension2over3over2(FieldExtension3over2<N> const &field, WindowExpBase<Fp2<N>> const &base) : FieldExtension3over2<N>(field), frobenius_coeffs_c1({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)})
+    FieldExtension2over3over2(FieldExtension3over2<N> const &field, WindowExpBase<Fp2<N>> const &base, bool needs_frobenius) : FieldExtension3over2<N>(field), frobenius_coeffs_c1({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)})
     {
+        if (needs_frobenius) {
+            // NON_RESIDUE**(((q^0) - 1) / 6)
+            auto const f_0 = Fp2<N>::one(field);
 
-        // Fq2(u + 1)**(((q^0) - 1) / 6)
-        auto const f_0 = Fp2<N>::one(field);
+            // NON_RESIDUE**(((q^1) - 1) / 6)
 
-        // Fq2(u + 1)**(((q^1) - 1) / 6)
+            // 1
+            auto const q_power_1 = field.mod();
+            auto const f_1 = base.exponentiate(calc_frobenius_power(q_power_1, 6, "Fp12"));
 
-        // 1
-        auto const q_power_1 = field.mod();
-        auto const f_1 = base.exponentiate(calc_frobenius_factor_2(q_power_1, 6, "Fp12"));
+            // 2
+            auto const q_power_2 = q_power_1 * field.mod();
+            auto const f_2 = base.exponentiate(calc_frobenius_power(q_power_2, 6, "Fp12"));
 
-        // 2
-        auto const q_power_2 = q_power_1 * field.mod();
-        auto const f_2 = base.exponentiate(calc_frobenius_factor_2(q_power_2, 6, "Fp12"));
+            // 3
+            auto const q_power_3 = q_power_2 * field.mod();
+            auto const f_3 = base.exponentiate(calc_frobenius_power(q_power_3, 6, "Fp12"));
 
-        // 3
-        auto const q_power_3 = q_power_2 * field.mod();
-        auto const f_3 = base.exponentiate(calc_frobenius_factor_2(q_power_3, 6, "Fp12"));
+            // 6
+            auto const q_power_6 = q_power_3 * q_power_3;
+            auto const f_6 = base.exponentiate(calc_frobenius_power(q_power_6, 6, "Fp12"));
 
-        // 6
-        auto const q_power_6 = q_power_3 * q_power_3;
-        auto const f_6 = base.exponentiate(calc_frobenius_factor_2(q_power_6, 6, "Fp12"));
+            auto const f_4 = Fp2<N>::zero(field);
+            auto const f_5 = Fp2<N>::zero(field);
 
-        auto const f_4 = Fp2<N>::zero(field);
-        auto const f_5 = Fp2<N>::zero(field);
+            auto const f_7 = Fp2<N>::zero(field);
+            auto const f_8 = Fp2<N>::zero(field);
+            auto const f_9 = Fp2<N>::zero(field);
+            auto const f_10 = Fp2<N>::zero(field);
+            auto const f_11 = Fp2<N>::zero(field);
 
-        auto const f_7 = Fp2<N>::zero(field);
-        auto const f_8 = Fp2<N>::zero(field);
-        auto const f_9 = Fp2<N>::zero(field);
-        auto const f_10 = Fp2<N>::zero(field);
-        auto const f_11 = Fp2<N>::zero(field);
+            std::array<Fp2<N>, 12> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2, f_3, f_4, f_5, f_6, f_7, f_8, f_9, f_10, f_11};
+            frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
 
-        std::array<Fp2<N>, 12> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2, f_3, f_4, f_5, f_6, f_7, f_8, f_9, f_10, f_11};
-        frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+            frobenius_calculated = true;
+        }
     }
 
     void mul_by_nonresidue(Fp6_3<N> &el) const
@@ -231,6 +235,7 @@ public:
 
     void frobenius_map(usize power)
     {
+        assert(field->frobenius_calculated);
         if (!(power == 1 || power == 2 || power == 3 || power == 6))
         {
             unreachable(stringf("can not reach power %u", power));

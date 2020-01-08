@@ -15,40 +15,44 @@ class FieldExtension3over2 : public FieldExtension2<N>
 
 public:
     std::array<Fp2<N>, 6> frobenius_coeffs_c1, frobenius_coeffs_c2;
-    FieldExtension3over2(Fp2<N> _non_residue, FieldExtension2<N> const &field, WindowExpBase<Fp2<N>> const &base) : FieldExtension2<N>(field), _non_residue(_non_residue), frobenius_coeffs_c1({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)}), frobenius_coeffs_c2({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)})
+    bool frobenius_calculated = false;
+    FieldExtension3over2(Fp2<N> _non_residue, FieldExtension2<N> const &field, WindowExpBase<Fp2<N>> const &base, bool needs_frobenius) : FieldExtension2<N>(field), _non_residue(_non_residue), frobenius_coeffs_c1({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)}), frobenius_coeffs_c2({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)})
     {
+        if (needs_frobenius) {
+            // NON_RESIDUE**(((q^0) - 1) / 3)
+            auto const f_0 = Fp2<N>::one(field);
 
-        // NON_RESIDUE**(((q^0) - 1) / 3)
-        auto const f_0 = Fp2<N>::one(field);
+            auto const q_power_1 = field.mod();
+            auto const f_1 = base.exponentiate(calc_frobenius_power(q_power_1, 3, "Fp6"));
 
-        auto const q_power_1 = field.mod();
-        auto const f_1 = base.exponentiate(calc_frobenius_factor_2(q_power_1, 3, "Fp6"));
+            auto const q_power_2 = q_power_1 * field.mod();
+            auto const f_2 = base.exponentiate(calc_frobenius_power(q_power_2, 3, "Fp6"));
 
-        auto const q_power_2 = q_power_1 * field.mod();
-        auto const f_2 = base.exponentiate(calc_frobenius_factor_2(q_power_2, 3, "Fp6"));
+            auto const q_power_3 = q_power_2 * field.mod();
+            auto const f_3 = base.exponentiate(calc_frobenius_power(q_power_3, 3, "Fp6"));
 
-        auto const q_power_3 = q_power_2 * field.mod();
-        auto const f_3 = base.exponentiate(calc_frobenius_factor_2(q_power_3, 3, "Fp6"));
+            auto const f_4 = Fp2<N>::zero(field);
+            auto const f_5 = Fp2<N>::zero(field);
 
-        auto const f_4 = Fp2<N>::zero(field);
-        auto const f_5 = Fp2<N>::zero(field);
+            auto const f_0_c2 = f_0;
 
-        auto const f_0_c2 = f_0;
+            auto f_1_c2 = f_1;
+            f_1_c2.square();
+            auto f_2_c2 = f_2;
+            f_2_c2.square();
+            auto f_3_c2 = f_3;
+            f_3_c2.square();
 
-        auto f_1_c2 = f_1;
-        f_1_c2.square();
-        auto f_2_c2 = f_2;
-        f_2_c2.square();
-        auto f_3_c2 = f_3;
-        f_3_c2.square();
+            auto const f_4_c2 = f_4;
+            auto const f_5_c2 = f_5;
 
-        auto const f_4_c2 = f_4;
-        auto const f_5_c2 = f_5;
+            std::array<Fp2<N>, 6> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2, f_3, f_4, f_5};
+            frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+            std::array<Fp2<N>, 6> calc_frobenius_coeffs_c2 = {f_0_c2, f_1_c2, f_2_c2, f_3_c2, f_4_c2, f_5_c2};
+            frobenius_coeffs_c2 = calc_frobenius_coeffs_c2;
 
-        std::array<Fp2<N>, 6> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2, f_3, f_4, f_5};
-        frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
-        std::array<Fp2<N>, 6> calc_frobenius_coeffs_c2 = {f_0_c2, f_1_c2, f_2_c2, f_3_c2, f_4_c2, f_5_c2};
-        frobenius_coeffs_c2 = calc_frobenius_coeffs_c2;
+            frobenius_calculated = true;
+        }
     }
 
     void mul_by_nonresidue(Fp2<N> &num) const
@@ -81,6 +85,7 @@ public:
 
     void frobenius_map(usize power)
     {
+        assert(field->frobenius_calculated);
         if (!(power == 0 || power == 1 || power == 2 || power == 3 || power == 6))
         {
             unreachable(stringf("can not reach power %u", power));

@@ -15,7 +15,7 @@ fn main() {
             .file("eip1962cpp/src/gas_meter.cpp")
             .warnings(false)
             .static_flag(true)
-            .opt_level_str("3")
+            // .opt_level_str("3")
             .compile("eip1962cpp.a");
     }
 

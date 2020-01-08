@@ -16,19 +16,24 @@ class FieldExtension2 : public PrimeField<N>
 
 public:
     std::array<Fp<N>, 2> frobenius_coeffs_c1;
+    bool frobenius_calculated = false;
 
-    FieldExtension2(Fp<N> non_residue, PrimeField<N> const &field) : PrimeField<N>(field), _non_residue(non_residue), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field)})
+    FieldExtension2(Fp<N> non_residue, PrimeField<N> const &field, bool needs_frobenius) : PrimeField<N>(field), _non_residue(non_residue), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field)})
     {
-        // calculate_frobenius_coeffs
+        if (needs_frobenius) {
+            // calculate_frobenius_coeffs
 
-        // NONRESIDUE**(((q^0) - 1) / 2)
-        auto const f_0 = Fp<N>::one(field);
+            // NONRESIDUE**(((q^0) - 1) / 2)
+            auto const f_0 = Fp<N>::one(field);
 
-        // NONRESIDUE**(((q^1) - 1) / 2)
-        auto const f_1 = calc_frobenius_factor(non_residue, field.mod(), 2, "Fp2");
+            // NONRESIDUE**(((q^1) - 1) / 2)
+            auto const f_1 = calc_frobenius_factor(non_residue, field.mod(), 2, "Fp2");
 
-        std::array<Fp<N>, 2> calc_frobenius_coeffs_c1 = {f_0, f_1};
-        frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+            std::array<Fp<N>, 2> calc_frobenius_coeffs_c1 = {f_0, f_1};
+            frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+
+            frobenius_calculated = true;
+        }
     }
 
     void mul_by_nonresidue(Fp<N> &num) const
@@ -212,6 +217,7 @@ public:
 
     void frobenius_map(usize power)
     {
+        assert(field->frobenius_calculated);
         c1.mul(field.frobenius_coeffs_c1[power % 2]);
     }
 

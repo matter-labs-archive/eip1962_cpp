@@ -15,22 +15,27 @@ class FieldExtension2over2 : public FieldExtension2<N>
 {
 public:
     std::array<Fp<N>, 4> frobenius_coeffs_c1;
+    bool frobenius_calculated = false;
 
-    FieldExtension2over2(FieldExtension2<N> const &field) : FieldExtension2<N>(field), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field)})
+    FieldExtension2over2(FieldExtension2<N> const &field, bool needs_frobenius) : FieldExtension2<N>(field), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field)})
     {
-        // NON_REDISUE**(((q^0) - 1) / 4)
-        auto const f_0 = Fp<N>::one(field);
+        if (needs_frobenius) {
+            // NON_REDISUE**(((q^0) - 1) / 4)
+            auto const f_0 = Fp<N>::one(field);
 
-        // NON_REDISUE**(((q^1) - 1) / 4)
-        auto const f_1 = calc_frobenius_factor(field.non_residue(), field.mod(), 4, "Fp4");
+            // NON_REDISUE**(((q^1) - 1) / 4)
+            auto const f_1 = calc_frobenius_factor(field.non_residue(), field.mod(), 4, "Fp4");
 
-        // NON_REDISUE**(((q^2) - 1) / 4)
-        auto const f_2 = calc_frobenius_factor(field.non_residue(), field.mod() * field.mod(), 4, "Fp4");
+            // NON_REDISUE**(((q^2) - 1) / 4)
+            auto const f_2 = calc_frobenius_factor(field.non_residue(), field.mod() * field.mod(), 4, "Fp4");
 
-        auto const f_3 = Fp<N>::zero(field);
+            auto const f_3 = Fp<N>::zero(field);
 
-        std::array<Fp<N>, 4> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2, f_3};
-        frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+            std::array<Fp<N>, 4> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2, f_3};
+            frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+
+            frobenius_calculated = true;
+        }
     }
 
     void mul_by_nonresidue(Fp2<N> &el) const
@@ -62,6 +67,7 @@ public:
 
     void frobenius_map(usize power)
     {
+        assert(field->frobenius_calculated);
         if (power != 1 && power != 2)
         {
             unreachable(stringf("can not reach power %u", power));

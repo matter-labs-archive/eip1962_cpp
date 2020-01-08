@@ -117,16 +117,16 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 {
     // Deser Weierstrass 1 & Extension2
     auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, true);
-    auto const extension2 = FieldExtension2(deserialize_non_residue<Fp<N>>(mod_byte_len, field, 2, deserializer), field);
+    auto const extension2 = FieldExtension2(deserialize_non_residue<Fp<N>>(mod_byte_len, field, 2, deserializer), field, true);
 
     // Deser Extension6 & TwistType
     auto const e6_non_residue = deserialize_non_residue<Fp2<N>>(mod_byte_len, extension2, 6, deserializer);
     auto const twist_type = deserialize_pairing_twist_type(deserializer);
     auto exp_base = WindowExpBase<Fp2<N>>(e6_non_residue, Fp2<N>::one(extension2), 8);
-    auto const extension6 = FieldExtension3over2(e6_non_residue, extension2, exp_base);
+    auto const extension6 = FieldExtension3over2(e6_non_residue, extension2, exp_base, true);
 
     // Construct Extension12
-    auto const extension12 = FieldExtension2over3over2(extension6, exp_base);
+    auto const extension12 = FieldExtension2over3over2(extension6, exp_base, true);
 
     // Compute Weierstrass 2
     auto const o_e6_non_residue_inv = e6_non_residue.inverse();
@@ -207,10 +207,10 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
 {
     // Deser Weierstrass 1 & Extension
     auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, false);
-    auto const extension = FE(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree * 2, deserializer), field);
+    auto const extension = FE(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree * 2, deserializer), field, true);
 
     // Construct Extension 2
-    auto const extension_2 = FEO(extension);
+    auto const extension_2 = FEO(extension, true);
 
     // Construct Weistrass 2
     auto const one = Fp<N>::one(field);
@@ -354,14 +354,14 @@ std::vector<std::uint8_t> run_operation(u8 operation, std::optional<u8> curve_ty
         case 2:
         {
             // deser Extension
-            FieldExtension2<N> const extension(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree, deserializer), field);
+            FieldExtension2<N> const extension(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree, deserializer), field, false);
 
             return run_operation_extension<N, Fp2<N>>(operation, mod_byte_len, extension, extension_degree, deserializer);
         }
         case 3:
         {
             // deser Extension
-            FieldExtension3<N> const extension(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree, deserializer), field);
+            FieldExtension3<N> const extension(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree, deserializer), field, false);
 
             return run_operation_extension<N, Fp3<N>>(operation, mod_byte_len, extension, extension_degree, deserializer);
         }

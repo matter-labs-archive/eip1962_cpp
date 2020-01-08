@@ -16,31 +16,36 @@ class FieldExtension3 : public PrimeField<N>
 
 public:
     std::array<Fp<N>, 3> frobenius_coeffs_c1, frobenius_coeffs_c2;
+    bool frobenius_calculated = false;
 
-    FieldExtension3(Fp<N> non_residue, PrimeField<N> const &field) : PrimeField<N>(field), _non_residue(non_residue), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field)}), frobenius_coeffs_c2({Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field)})
+    FieldExtension3(Fp<N> non_residue, PrimeField<N> const &field, bool needs_frobenius) : PrimeField<N>(field), _non_residue(non_residue), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field)}), frobenius_coeffs_c2({Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field)})
     {
-        // NON_RESIDUE**(((q^0) - 1) / 3)
-        auto const f_0 = Fp<N>::one(field);
+        if (needs_frobenius) {
+            // NON_RESIDUE**(((q^0) - 1) / 3)
+            auto const f_0 = Fp<N>::one(field);
 
-        // NON_RESIDUE**(((q^1) - 1) / 3)
-        auto const f_1 = calc_frobenius_factor(non_residue, field.mod(), 3, "Fp3");
+            // NON_RESIDUE**(((q^1) - 1) / 3)
+            auto const f_1 = calc_frobenius_factor(non_residue, field.mod(), 3, "Fp3");
 
-        // NON_RESIDUE**(((q^2) - 1) / 3)
-        auto const f_2 = calc_frobenius_factor(non_residue, field.mod() * field.mod(), 3, "Fp3");
+            // NON_RESIDUE**(((q^2) - 1) / 3)
+            auto const f_2 = calc_frobenius_factor(non_residue, field.mod() * field.mod(), 3, "Fp3");
 
-        auto const f_0_c2 = f_0;
+            auto const f_0_c2 = f_0;
 
-        auto f_1_c2 = f_1;
-        auto f_2_c2 = f_2;
+            auto f_1_c2 = f_1;
+            auto f_2_c2 = f_2;
 
-        f_1_c2.square();
-        f_2_c2.square();
+            f_1_c2.square();
+            f_2_c2.square();
 
-        std::array<Fp<N>, 3> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2};
-        std::array<Fp<N>, 3> calc_frobenius_coeffs_c2 = {f_0_c2, f_1_c2, f_2_c2};
+            std::array<Fp<N>, 3> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2};
+            std::array<Fp<N>, 3> calc_frobenius_coeffs_c2 = {f_0_c2, f_1_c2, f_2_c2};
 
-        frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
-        frobenius_coeffs_c2 = calc_frobenius_coeffs_c2;
+            frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+            frobenius_coeffs_c2 = calc_frobenius_coeffs_c2;
+        
+            frobenius_calculated = true;
+        }
     }
 
     void mul_by_nonresidue(Fp<N> &num) const
@@ -308,6 +313,7 @@ public:
     }
     void frobenius_map(usize power)
     {
+        assert(field->frobenius_calculated);
         c1.mul(field.frobenius_coeffs_c1[power % 3]);
         c2.mul(field.frobenius_coeffs_c2[power % 3]);
     }
