@@ -1,7 +1,7 @@
 extern crate cc;
 
 fn main() {
-    #[cfg(all(not(feature = "fuzz"), not(feature = "gcc"), not(feature = "clang")))]
+    #[cfg(all(not(feature = "fuzz"), not(feature = "fuzzing_mode"), not(feature = "gcc"), not(feature = "clang")))]
     {
         cc::Build::new()
             .cpp(true) // Switch to C++ library compilation.
@@ -19,7 +19,7 @@ fn main() {
             .compile("eip1962cpp.a");
     }
 
-    #[cfg(all(feature = "fuzzing_mode", not(feature = "gcc"), not(feature = "clang")))]
+    #[cfg(all(not(feature = "fuzz"), feature = "fuzzing_mode", not(feature = "gcc"), not(feature = "clang")))]
     {
         cc::Build::new()
             .cpp(true) // Switch to C++ library compilation.
@@ -31,7 +31,7 @@ fn main() {
             .file("eip1962cpp/src/common.cpp")
             .file("eip1962cpp/src/wrapper.cpp")
             .file("eip1962cpp/src/repr.cpp")
-            .file("eip1962cpp/src/gas_meter.cpp")
+            // .file("eip1962cpp/src/gas_meter.cpp")
             .warnings(false)
             .static_flag(true)
             .opt_level_str("3")
