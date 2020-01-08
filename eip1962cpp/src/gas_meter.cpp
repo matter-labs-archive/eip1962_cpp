@@ -25,8 +25,6 @@ using json = nlohmann::json;
 //   ThreadSafeSingleton& operator=(const ThreadSafeSingleton&)= delete;
 // };
 
-// class AdditionParameters: ThreadSafeSingleton {
-
 template<const char *filename>
 class AdditionParameters {
 public:

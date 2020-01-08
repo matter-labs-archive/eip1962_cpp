@@ -53,6 +53,10 @@ u64 adc(u64 a, u64 b, u64 &carry);
 representation of positive integer n */
 u32 count_ones(u64 n);
 
+/* Function to get no of leading zero bits in binary 
+representation of positive integer n */
+u32 leading_zero(u64 x);
+
 // *********************** FUNCTIONS on std::vector<u64> ******************* //
 
 bool is_zero(std::vector<u64> const &repr);

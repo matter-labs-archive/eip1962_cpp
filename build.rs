@@ -41,7 +41,7 @@ fn main() {
             .compile("eip1962cpp.a");
     }
 
-    #[cfg(all(not(feature = "fuzz"), feature = "gcc"))]
+    #[cfg(all(not(feature = "fuzz"), not(feature = "clang"), feature = "gcc"))]
     {
         let compiler = cc::Build::new().cpp(true).get_compiler();
         if !compiler.is_like_gnu() {
