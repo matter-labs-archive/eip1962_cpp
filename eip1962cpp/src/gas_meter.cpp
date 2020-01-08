@@ -1,7 +1,6 @@
 #include "constants.h"
 #include "gas_meter.h"
 #include "deserialization.h"
-#include "repr.h"
 
 #include <fstream>
 
