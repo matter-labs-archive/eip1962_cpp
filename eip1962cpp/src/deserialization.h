@@ -238,7 +238,9 @@ F inline deserialize_non_residue(u8 mod_byte_len, C const &field, u8 extension_d
 
     if (!non_residue.is_non_nth_root(extension_degree))
     {
-        input_err("Non-residue for Fp* is actually a residue");
+        if (!in_fuzzing()) {
+            input_err("Non-residue for Fp* is actually a residue");
+        }
     }
 
     return non_residue;
