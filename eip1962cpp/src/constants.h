@@ -59,4 +59,9 @@ static const u32 MAX_ATE_PAIRING_ATE_LOOP_COUNT_HAMMING = 2032;
 static const usize MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH = 2032;
 static const usize MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH = 2032;
 
+static const usize MNT4_MAX_MODULUS_POWER = 4;
+static const usize MNT6_MAX_MODULUS_POWER = 6;
+static const usize BN_MAX_MODULUS_POWER = 6;
+static const usize BLS12_MAX_MODULUS_POWER = 6;
+
 #endif

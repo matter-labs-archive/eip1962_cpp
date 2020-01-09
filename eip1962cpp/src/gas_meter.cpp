@@ -53,7 +53,6 @@ public:
     std::unordered_map<u64, u64> prices;
 private:
     AdditionParametersModel(std::string const &s) {
-        std::cout << "Init addition with " << s << std::endl;
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> all_prices = prices_json["price"];
         for(auto const& pair: all_prices) {
@@ -76,7 +75,6 @@ public:
     std::unordered_map<u64, u64> price_per_order_limb;
 private:
     MultiplicationParametersModel(std::string const &s) {
-        std::cout << "Init multiplication with " << s << std::endl;
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> base_prices_vec = prices_json["base"];
         std::vector<std::pair<u64, u64>> per_limb_prices_vec = prices_json["per_limb"];
@@ -105,7 +103,6 @@ public:
     std::unordered_map<u64, u64> dicsounts;
 private:
     MultiexpParametersModel(std::string const &s) {
-        std::cout << "Init multiexp with " << s << std::endl;
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> discounts_vec = prices_json["discounts"];
         for(auto const& pair: discounts_vec) {
@@ -713,9 +710,9 @@ u64 perform_mnt_metering(u8 mod_byte_len, Deserializer deserializer) {
 
     switch (EXT) {
         case 4:
-            return calculate_mnt_metering<Mnt4ModelMarker, EXT, 4>(data, models_mnt4_model_json_string);
+            return calculate_mnt_metering<Mnt4ModelMarker, EXT, MNT4_MAX_MODULUS_POWER>(data, models_mnt4_model_json_string);
         case 6:
-            return calculate_mnt_metering<Mnt6ModelMarker, EXT, 6>(data, models_mnt6_model_json_string);
+            return calculate_mnt_metering<Mnt6ModelMarker, EXT, MNT6_MAX_MODULUS_POWER>(data, models_mnt6_model_json_string);
         default:
             input_err("unknown MNT curve type");
     }
@@ -730,7 +727,52 @@ u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
 
     BlsBnParametersModel<Bls12ModelMarker> &instance = BlsBnParametersModel<Bls12ModelMarker>::getInstance(models_bls12_model_json_string);
 
-    return 1;
+    u64 final_result = 0;
+
+    u64 multiplier = instance.multiplier;
+
+    auto miller_price_model = instance.miller;
+ 
+    auto final_ext_price_model = instance.final_exp; 
+
+    auto modulus_limbs_powers = make_powers(data.modulus_limbs, BLS12_MAX_MODULUS_POWER);
+
+    std::vector<std::vector<u64>> miller_params;
+    miller_params.reserve(4);
+
+    std::vector<u64> group_order_limbs;
+    group_order_limbs.emplace_back(data.group_order_limbs);
+
+    std::vector<u64> x_bits;
+    x_bits.emplace_back(data.x_bits);
+
+    std::vector<u64> x_hamming;
+    x_hamming.emplace_back(data.x_hamming);
+
+    miller_params.emplace_back(group_order_limbs);
+    miller_params.emplace_back(x_bits);
+    miller_params.emplace_back(x_hamming);
+    miller_params.emplace_back(modulus_limbs_powers);
+
+    u64 miller_cost = eval_model(miller_price_model, miller_params);
+    miller_cost = checked_mul(miller_cost, data.num_pairs);
+
+    final_result = checked_add(final_result, miller_cost);
+
+    std::vector<std::vector<u64>> final_exp_params;
+    final_exp_params.reserve(3);
+
+    final_exp_params.emplace_back(x_bits);
+    final_exp_params.emplace_back(x_hamming);
+    final_exp_params.emplace_back(modulus_limbs_powers);
+
+    u64 final_exp_cost = eval_model(final_ext_price_model, final_exp_params);
+
+    final_result = checked_add(final_result, final_exp_cost);
+
+    final_result = final_result / multiplier;
+
+    return final_result;
 }
 
 template <usize N>
@@ -741,7 +783,59 @@ u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
     }
 
     BlsBnParametersModel<BnModelMarker> &instance = BlsBnParametersModel<BnModelMarker>::getInstance(models_bn_model_json_string);
-    return 2;
+    
+    u64 final_result = 0;
+
+    u64 multiplier = instance.multiplier;
+
+    auto miller_price_model = instance.miller;
+ 
+    auto final_ext_price_model = instance.final_exp; 
+
+    auto modulus_limbs_powers = make_powers(data.modulus_limbs, BN_MAX_MODULUS_POWER);
+
+    std::vector<std::vector<u64>> miller_params;
+    miller_params.reserve(4);
+
+    std::vector<u64> group_order_limbs;
+    group_order_limbs.emplace_back(data.group_order_limbs);
+
+    std::vector<u64> six_u_plus_two_bits;
+    six_u_plus_two_bits.emplace_back(data.six_u_plus_two_bits);
+
+    std::vector<u64> six_u_plus_two_hamming;
+    six_u_plus_two_hamming.emplace_back(data.six_u_plus_two_hamming);
+
+    miller_params.emplace_back(group_order_limbs);
+    miller_params.emplace_back(six_u_plus_two_bits);
+    miller_params.emplace_back(six_u_plus_two_hamming);
+    miller_params.emplace_back(modulus_limbs_powers);
+
+    u64 miller_cost = eval_model(miller_price_model, miller_params);
+    miller_cost = checked_mul(miller_cost, data.num_pairs);
+
+    final_result = checked_add(final_result, miller_cost);
+
+    std::vector<std::vector<u64>> final_exp_params;
+    final_exp_params.reserve(3);
+
+    std::vector<u64> u_bits;
+    u_bits.emplace_back(data.u_bits);
+
+    std::vector<u64> u_hamming;
+    u_hamming.emplace_back(data.u_hamming);
+
+    final_exp_params.emplace_back(u_bits);
+    final_exp_params.emplace_back(u_hamming);
+    final_exp_params.emplace_back(modulus_limbs_powers);
+
+    u64 final_exp_cost = eval_model(final_ext_price_model, final_exp_params);
+
+    final_result = checked_add(final_result, final_exp_cost);
+
+    final_result = final_result / multiplier;
+
+    return final_result;
 }
 
 template <usize N>
