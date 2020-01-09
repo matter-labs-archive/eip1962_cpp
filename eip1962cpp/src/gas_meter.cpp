@@ -46,13 +46,14 @@ const std::string models_mnt6_model_json_string(reinterpret_cast<const char*>(mo
 template<typename MARKER>
 class AdditionParametersModel {
 public:
-    static AdditionParametersModel& getInstance(std::string const &s = nullptr) {
+    static AdditionParametersModel& getInstance(std::string const &s) {
         static AdditionParametersModel instance(s);
         return instance;
     }
     std::unordered_map<u64, u64> prices;
 private:
-    AdditionParametersModel(std::string const &s = nullptr) {
+    AdditionParametersModel(std::string const &s) {
+        std::cout << "Init addition with " << s << std::endl;
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> all_prices = prices_json["price"];
         for(auto const& pair: all_prices) {
@@ -67,14 +68,15 @@ private:
 template<typename MARKER>
 class MultiplicationParametersModel {
 public:
-    static MultiplicationParametersModel& getInstance(std::string const &s = nullptr) {
+    static MultiplicationParametersModel& getInstance(std::string const &s) {
         static MultiplicationParametersModel instance(s);
         return instance;
     }
     std::unordered_map<u64, u64> base_prices;
     std::unordered_map<u64, u64> price_per_order_limb;
 private:
-    MultiplicationParametersModel(std::string const &s = nullptr) {
+    MultiplicationParametersModel(std::string const &s) {
+        std::cout << "Init multiplication with " << s << std::endl;
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> base_prices_vec = prices_json["base"];
         std::vector<std::pair<u64, u64>> per_limb_prices_vec = prices_json["per_limb"];
@@ -93,7 +95,7 @@ private:
 template<typename MARKER>
 class MultiexpParametersModel {
 public:
-    static MultiexpParametersModel& getInstance(std::string const &s = nullptr) {
+    static MultiexpParametersModel& getInstance(std::string const &s) {
         static MultiexpParametersModel instance(s);
         return instance;
     }
@@ -102,7 +104,8 @@ public:
     u64 multiplier;
     std::unordered_map<u64, u64> dicsounts;
 private:
-    MultiexpParametersModel(std::string const &s = nullptr) {
+    MultiexpParametersModel(std::string const &s) {
+        std::cout << "Init multiexp with " << s << std::endl;
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> discounts_vec = prices_json["discounts"];
         for(auto const& pair: discounts_vec) {
@@ -120,7 +123,7 @@ private:
 template<typename MARKER, usize MAX>
 class MntParametersModel {
 public:
-    static MntParametersModel& getInstance(std::string const &s = nullptr) {
+    static MntParametersModel& getInstance(std::string const &s) {
         static MntParametersModel instance(s);
         return instance;
     }
@@ -129,7 +132,7 @@ public:
     std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller;
     std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp;
 private:
-    MntParametersModel(std::string const &s = nullptr) {
+    MntParametersModel(std::string const &s) {
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> one_off_prices_vec = prices_json["one_off"];
         std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller_prices_vec = prices_json["miller"];
@@ -149,7 +152,7 @@ private:
 template<typename MARKER>
 class BlsBnParametersModel {
 public:
-    static BlsBnParametersModel& getInstance(std::string const &s = nullptr) {
+    static BlsBnParametersModel& getInstance(std::string const &s) {
         static BlsBnParametersModel instance(s);
         return instance;
     }
@@ -157,7 +160,7 @@ public:
     std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller;
     std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp;
 private:
-    BlsBnParametersModel(std::string const &s = nullptr) {
+    BlsBnParametersModel(std::string const &s) {
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller_prices_vec = prices_json["miller"];
         std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp_prices_vec = prices_json["final_exp"];
@@ -523,7 +526,7 @@ u64 eval_model(
 template<typename MARKER>
 u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs, const std::string &model) {
     // std::unordered_map<u64,u64>::const_iterator
-    MultiplicationParametersModel<MARKER> &instance = MultiplicationParametersModel<MARKER>::getInstance();
+    MultiplicationParametersModel<MARKER> &instance = MultiplicationParametersModel<MARKER>::getInstance(model);
     auto base_price = instance.base_prices.find(modulus_limbs);
     if (base_price == instance.base_prices.end() ){
         input_err("invalid number of limbs");
