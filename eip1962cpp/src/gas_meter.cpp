@@ -28,50 +28,53 @@ There are no magic/hacks here, only templates.
 
 using json = nlohmann::json;
 
-// class ThreadSafeSingleton{
-// private:
-//   ThreadSafeSingleton()= default;
-//   ~ThreadSafeSingleton()= default;
-//   ThreadSafeSingleton(const ThreadSafeSingleton&)= delete;
-//   ThreadSafeSingleton& operator=(const ThreadSafeSingleton&)= delete;
-// };
+const std::string models_g1_addition_string(reinterpret_cast<const char*>(models_g1_addition_json), models_g1_addition_json_len);
+const std::string models_g2_addition_ext2_string(reinterpret_cast<const char*>(models_g2_addition_ext2_json), models_g2_addition_ext2_json_len);
+const std::string models_g2_addition_ext3_string(reinterpret_cast<const char*>(models_g2_addition_ext3_json), models_g2_addition_ext3_json_len);
 
-template<const unsigned char *data, usize N>
-class AdditionParameters {
+const std::string models_g1_multiplication_string(reinterpret_cast<const char*>(models_g1_multiplication_json), models_g1_multiplication_json_len);
+const std::string models_g2_multiplication_ext2_string(reinterpret_cast<const char*>(models_g2_multiplication_ext2_json), models_g2_multiplication_ext2_json_len);
+const std::string models_g2_multiplication_ext3_string(reinterpret_cast<const char*>(models_g2_multiplication_ext3_json), models_g2_multiplication_ext3_json_len);
+
+const std::string models_multiexp_discounts_string(reinterpret_cast<const char*>(models_multiexp_discounts_json), models_multiexp_discounts_json_len);
+
+const std::string models_bn_model_json_string(reinterpret_cast<const char*>(models_bn_model_json), models_bn_model_json_len);
+const std::string models_bls12_model_json_string(reinterpret_cast<const char*>(models_bls12_model_json), models_bls12_model_json_len);
+const std::string models_mnt4_model_json_string(reinterpret_cast<const char*>(models_mnt4_model_json), models_mnt4_model_json_len);
+const std::string models_mnt6_model_json_string(reinterpret_cast<const char*>(models_mnt6_model_json), models_mnt6_model_json_len);
+
+template<typename MARKER>
+class AdditionParametersModel {
 public:
-  static AdditionParameters& getInstance() {
-    static AdditionParameters instance;
-    return instance;
-  }
-
+    static AdditionParametersModel& getInstance(std::string const &s = nullptr) {
+        static AdditionParametersModel instance(s);
+        return instance;
+    }
     std::unordered_map<u64, u64> prices;
 private:
-    AdditionParameters() {
-        std::string const s(reinterpret_cast<const char*>(data), N);
+    AdditionParametersModel(std::string const &s = nullptr) {
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> all_prices = prices_json["price"];
         for(auto const& pair: all_prices) {
             prices.emplace(std::get<0>(pair), std::get<1>(pair));
         }
     }
-    ~AdditionParameters()= default;
-    AdditionParameters(const AdditionParameters&)= delete;
-    AdditionParameters& operator=(const AdditionParameters&)= delete;
+    ~AdditionParametersModel()= default;
+    AdditionParametersModel(const AdditionParametersModel&)= delete;
+    AdditionParametersModel& operator=(const AdditionParametersModel&)= delete;
 };
 
-template<const unsigned char *data, usize N>
-class MultiplicationParameters {
+template<typename MARKER>
+class MultiplicationParametersModel {
 public:
-  static MultiplicationParameters& getInstance() {
-    static MultiplicationParameters instance;
-    return instance;
-  }
-
+    static MultiplicationParametersModel& getInstance(std::string const &s = nullptr) {
+        static MultiplicationParametersModel instance(s);
+        return instance;
+    }
     std::unordered_map<u64, u64> base_prices;
     std::unordered_map<u64, u64> price_per_order_limb;
 private:
-    MultiplicationParameters() {
-        std::string const s(reinterpret_cast<const char*>(data), N);
+    MultiplicationParametersModel(std::string const &s = nullptr) {
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> base_prices_vec = prices_json["base"];
         std::vector<std::pair<u64, u64>> per_limb_prices_vec = prices_json["per_limb"];
@@ -82,25 +85,24 @@ private:
             price_per_order_limb.emplace(std::get<0>(pair), std::get<1>(pair));
         }
     }
-    ~MultiplicationParameters()= default;
-    MultiplicationParameters(const MultiplicationParameters&)= delete;
-    MultiplicationParameters& operator=(const MultiplicationParameters&)= delete;
+    ~MultiplicationParametersModel()= default;
+    MultiplicationParametersModel(const MultiplicationParametersModel&)= delete;
+    MultiplicationParametersModel& operator=(const MultiplicationParametersModel&)= delete;
 };
 
-template<const unsigned char *data, usize N>
-class MultiexpParameters {
+template<typename MARKER>
+class MultiexpParametersModel {
 public:
-  static MultiexpParameters& getInstance() {
-    static MultiexpParameters instance;
-    return instance;
-  }
+    static MultiexpParametersModel& getInstance(std::string const &s = nullptr) {
+        static MultiexpParametersModel instance(s);
+        return instance;
+    }
     u64 max_pairs;
     u64 max_discount;
     u64 multiplier;
     std::unordered_map<u64, u64> dicsounts;
 private:
-    MultiexpParameters() {
-        std::string const s(reinterpret_cast<const char*>(data), N);
+    MultiexpParametersModel(std::string const &s = nullptr) {
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> discounts_vec = prices_json["discounts"];
         for(auto const& pair: discounts_vec) {
@@ -110,25 +112,24 @@ private:
         max_discount = prices_json["max_discount"];
         multiplier = prices_json["discount_multiplier"];
     }
-    ~MultiexpParameters()= default;
-    MultiexpParameters(const MultiexpParameters&)= delete;
-    MultiexpParameters& operator=(const MultiexpParameters&)= delete;
+    ~MultiexpParametersModel()= default;
+    MultiexpParametersModel(const MultiexpParametersModel&)= delete;
+    MultiexpParametersModel& operator=(const MultiexpParametersModel&)= delete;
 };
 
-template<const unsigned char *data, usize N, usize MAX>
-class MntParameters {
+template<typename MARKER, usize MAX>
+class MntParametersModel {
 public:
-  static MntParameters& getInstance() {
-    static MntParameters instance;
-    return instance;
-  }
+    static MntParametersModel& getInstance(std::string const &s = nullptr) {
+        static MntParametersModel instance(s);
+        return instance;
+    }
     std::unordered_map<u64, u64> one_off;
     u64 multiplier;
     std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller;
     std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp;
 private:
-    MntParameters() {
-        std::string const s(reinterpret_cast<const char*>(data), N);
+    MntParametersModel(std::string const &s = nullptr) {
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, u64>> one_off_prices_vec = prices_json["one_off"];
         std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller_prices_vec = prices_json["miller"];
@@ -140,24 +141,23 @@ private:
         final_exp = final_exp_prices_vec;
         multiplier = prices_json["multiplier"];
     }
-    ~MntParameters()= default;
-    MntParameters(const MntParameters&)= delete;
-    MntParameters& operator=(const MntParameters&)= delete;
+    ~MntParametersModel()= default;
+    MntParametersModel(const MntParametersModel&)= delete;
+    MntParametersModel& operator=(const MntParametersModel&)= delete;
 };
 
-template<const unsigned char *data, usize N>
-class BlsBnParameters {
+template<typename MARKER>
+class BlsBnParametersModel {
 public:
-  static BlsBnParameters& getInstance() {
-    static BlsBnParameters instance;
-    return instance;
-  }
+    static BlsBnParametersModel& getInstance(std::string const &s = nullptr) {
+        static BlsBnParametersModel instance(s);
+        return instance;
+    }
     u64 multiplier;
     std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller;
     std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp;
 private:
-    BlsBnParameters() {
-        std::string const s(reinterpret_cast<const char*>(data), N);
+    BlsBnParametersModel(std::string const &s = nullptr) {
         auto prices_json = json::parse(s);
         std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller_prices_vec = prices_json["miller"];
         std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp_prices_vec = prices_json["final_exp"];
@@ -165,10 +165,25 @@ private:
         final_exp = final_exp_prices_vec;
         multiplier = prices_json["multiplier"];
     }
-    ~BlsBnParameters()= default;
-    BlsBnParameters(const BlsBnParameters&)= delete;
-    BlsBnParameters& operator=(const BlsBnParameters&)= delete;
+    ~BlsBnParametersModel()= default;
+    BlsBnParametersModel(const BlsBnParametersModel&)= delete;
+    BlsBnParametersModel& operator=(const BlsBnParametersModel&)= delete;
 };
+
+struct G1AdditionModelMarker{};
+struct G2AdditionModelExt2Marker{};
+struct G2AdditionModelExt3Marker{};
+
+struct G1MultiplicationModelMarker{};
+struct G2MultiplicationModelExt2Marker{};
+struct G2MultiplicationModelExt3Marker{};
+
+struct MultiexpModelMarker{};
+
+struct Mnt4ModelMarker{};
+struct Mnt6ModelMarker{};
+struct Bls12ModelMarker{};
+struct BnModelMarker{};
 
 struct G1G2CurveData {
     u64 modulus_limbs;
@@ -423,10 +438,10 @@ BnCurveData parse_bn_data(u8 mod_byte_len,  Deserializer &deserializer) {
 
 
 
-template<const unsigned char *data, usize N>
-u64 calculate_addition_metering(u64 modulus_limbs) {
+template<typename MARKER>
+u64 calculate_addition_metering(u64 modulus_limbs, const std::string &model) {
     // std::unordered_map<u64,u64>::const_iterator
-    AdditionParameters<data, N> &instance = AdditionParameters<data, N>::getInstance();
+    AdditionParametersModel<MARKER> &instance = AdditionParametersModel<MARKER>::getInstance(model);
     auto price = instance.prices.find(modulus_limbs);
     if (price == instance.prices.end() ){
         input_err("invalid number of limbs");
@@ -505,10 +520,10 @@ u64 eval_model(
     return final_result;
 }
 
-template<const unsigned char *data, usize N>
-u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs) {
+template<typename MARKER>
+u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs, const std::string &model) {
     // std::unordered_map<u64,u64>::const_iterator
-    MultiplicationParameters<data, N> &instance = MultiplicationParameters<data, N>::getInstance();
+    MultiplicationParametersModel<MARKER> &instance = MultiplicationParametersModel<MARKER>::getInstance();
     auto base_price = instance.base_prices.find(modulus_limbs);
     if (base_price == instance.base_prices.end() ){
         input_err("invalid number of limbs");
@@ -523,12 +538,12 @@ u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs) 
     return result;
 }
 
-template<const unsigned char *data, usize N>
-u64 calculate_multiexp_metering(u64 modulus_limbs, u64 group_order_limbs, u64 num_pairs) {
-    u64 result = calculate_multiplication_metering<data, N>(modulus_limbs, group_order_limbs);
+template<typename MARKER>
+u64 calculate_multiexp_metering(u64 modulus_limbs, u64 group_order_limbs, u64 num_pairs, const std::string &mul_model) {
+    u64 result = calculate_multiplication_metering<MARKER>(modulus_limbs, group_order_limbs, mul_model);
     result = checked_mul(result, num_pairs);
 
-    MultiexpParameters<models_multiexp_discounts_json, models_multiexp_discounts_json_len> &instance = MultiexpParameters<models_multiexp_discounts_json, models_multiexp_discounts_json_len>::getInstance();
+    MultiexpParametersModel<MultiexpModelMarker> &instance = MultiexpParametersModel<MultiexpModelMarker>::getInstance(models_multiexp_discounts_string);
 
     u64 discount = 0;
     if (num_pairs > instance.max_pairs) {
@@ -552,11 +567,11 @@ u64 calculate_multiexp_metering(u64 modulus_limbs, u64 group_order_limbs, u64 nu
     return result;
 }
 
-template<const unsigned char *data, usize N, usize EXT, usize MAX>
-u64 calculate_mnt_metering(MntCurveData<EXT> curve_data) {
+template<typename MARKER, usize EXT, usize MAX>
+u64 calculate_mnt_metering(MntCurveData<EXT> curve_data, const std::string &model) {
     u64 final_result = 0;
 
-    MntParameters<data, N, MAX> &instance = MntParameters<data, N, MAX>::getInstance();
+    MntParametersModel<MARKER, MAX> &instance = MntParametersModel<MARKER, MAX>::getInstance(model);
 
     // std::unordered_map<u64,u64>::const_iterator
     auto one_off_price = instance.one_off.find(curve_data.modulus_limbs);
@@ -635,11 +650,11 @@ u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool i
     
     switch (data.extension_degree) {
         case 1:
-            return calculate_addition_metering<models_g1_addition_json, models_g1_addition_json_len>(data.modulus_limbs);
+            return calculate_addition_metering<G1AdditionModelMarker>(data.modulus_limbs, models_g1_addition_string);
         case 2:
-            return calculate_addition_metering<models_g2_addition_ext2_json, models_g2_addition_ext2_json_len>(data.modulus_limbs);
+            return calculate_addition_metering<G2AdditionModelExt2Marker>(data.modulus_limbs, models_g2_addition_ext2_string);
         case 3:
-            return calculate_addition_metering<models_g2_addition_ext3_json, models_g2_addition_ext3_json_len>(data.modulus_limbs);
+            return calculate_addition_metering<G2AdditionModelExt3Marker>(data.modulus_limbs, models_g2_addition_ext3_string);
     }
     input_err("unknown extension degree");
 }
@@ -653,11 +668,11 @@ u64 perform_multiplication_metering(u8 mod_byte_len, Deserializer deserializer, 
 
     switch (data.extension_degree) {
         case 1:
-            return calculate_multiplication_metering<models_g1_multiplication_json, models_g1_multiplication_json_len>(data.modulus_limbs, data.group_order_limbs);
+            return calculate_multiplication_metering<G1MultiplicationModelMarker>(data.modulus_limbs, data.group_order_limbs, models_g1_multiplication_string);
         case 2:
-            return calculate_multiplication_metering<models_g2_multiplication_ext2_json, models_g2_multiplication_ext2_json_len>(data.modulus_limbs, data.group_order_limbs);
+            return calculate_multiplication_metering<G2MultiplicationModelExt2Marker>(data.modulus_limbs, data.group_order_limbs, models_g2_multiplication_ext2_string);
         case 3:
-            return calculate_multiplication_metering<models_g2_multiplication_ext3_json, models_g2_multiplication_ext3_json_len>(data.modulus_limbs, data.group_order_limbs);
+            return calculate_multiplication_metering<G2MultiplicationModelExt3Marker>(data.modulus_limbs, data.group_order_limbs, models_g2_multiplication_ext3_string);
     }
     input_err("unknown extension degree");
 }
@@ -677,11 +692,11 @@ u64 perform_multiexp_metering(u8 mod_byte_len, Deserializer deserializer, bool i
 
     switch (data.extension_degree) {
         case 1:
-            return calculate_multiexp_metering<models_g1_multiplication_json, models_g1_multiplication_json_len>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs));
+            return calculate_multiexp_metering<G1MultiplicationModelMarker>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs), models_g1_multiplication_string);
         case 2:
-            return calculate_multiexp_metering<models_g2_multiplication_ext2_json, models_g2_multiplication_ext2_json_len>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs));
+            return calculate_multiexp_metering<G2MultiplicationModelExt2Marker>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs), models_g2_multiplication_ext2_string);
         case 3:
-            return calculate_multiexp_metering<models_g2_multiplication_ext3_json, models_g2_multiplication_ext3_json_len>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs));
+            return calculate_multiexp_metering<G2MultiplicationModelExt3Marker>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs), models_g2_multiplication_ext3_string);
     }
     input_err("unknown extension degree");
 }
@@ -695,9 +710,9 @@ u64 perform_mnt_metering(u8 mod_byte_len, Deserializer deserializer) {
 
     switch (EXT) {
         case 4:
-            return calculate_mnt_metering<models_mnt4_model_json, models_mnt4_model_json_len, EXT, 4>(data);
+            return calculate_mnt_metering<Mnt4ModelMarker, EXT, 4>(data, models_mnt4_model_json_string);
         case 6:
-            return calculate_mnt_metering<models_mnt6_model_json, models_mnt6_model_json_len, EXT, 6>(data);
+            return calculate_mnt_metering<Mnt6ModelMarker, EXT, 6>(data, models_mnt6_model_json_string);
         default:
             input_err("unknown MNT curve type");
     }
@@ -710,6 +725,8 @@ u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
         input_err("input is not long enough");
     }
 
+    BlsBnParametersModel<Bls12ModelMarker> &instance = BlsBnParametersModel<Bls12ModelMarker>::getInstance(models_bls12_model_json_string);
+
     return 1;
 }
 
@@ -720,6 +737,7 @@ u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
         input_err("input is not long enough");
     }
 
+    BlsBnParametersModel<BnModelMarker> &instance = BlsBnParametersModel<BnModelMarker>::getInstance(models_bn_model_json_string);
     return 2;
 }
 
