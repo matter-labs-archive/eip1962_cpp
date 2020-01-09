@@ -166,7 +166,7 @@ representation of positive integer n */
 u32 count_ones(u64 n)
 {
     unsigned int count = 0;
-    while (n)
+    while (n > 0)
     {
         count += n & 1;
         n >>= 1;
@@ -194,30 +194,43 @@ u32 num_bits(std::vector<u64> const &repr)
 
 void add_scalar(std::vector<u64> &repr, u64 value)
 {
-    for (usize i = 0; value > 0; i++)
+    if (repr.size() == 0) {
+        repr.push_back(value);
+        return;
+    }
+    u64 carry = 0;
+
+    repr[0] = adc(repr[0], value, carry);
+
+    for (usize i = 1; carry > 0; i++)
     {
         if (i >= repr.size())
         {
-            repr.push_back(value);
+            repr.push_back(carry);
             break;
         }
 
-        repr[i] = adc(repr[i], value, value);
+        repr[i] = adc(repr[i], 0, carry);
     }
 }
 
 void sub_scalar(std::vector<u64> &repr, u64 value)
 {
-    for (usize i = 0; value > 0; i++)
+    if (repr.size() == 0) {
+        input_err("overflowing subtraction");
+    }
+    u64 borrow = 0;
+
+    repr[0] = sbb(repr[0], value, borrow);
+
+    for (usize i = 1; borrow > 0; i++)
     {
         if (i >= repr.size())
         {
             input_err("overflowing subtraction");
-            // repr.push_back(value);
-            // break;
         }
 
-        repr[i] = sbb(repr[i], value, value);
+        repr[i] = sbb(repr[i], 0, borrow);
     }
 }
 
