@@ -12,6 +12,7 @@
 #include "g1_multiplication.h"
 #include "g2_multiplication_ext2.h"
 #include "g2_multiplication_ext3.h"
+#include "multiexp_discounts.h"
 #include "bls12_model.h"
 #include "bn_model.h"
 #include "mnt4_model.h"
@@ -75,16 +76,41 @@ private:
         std::vector<std::pair<u64, u64>> per_limb_prices_vec = prices_json["per_limb"];
         for(auto const& pair: base_prices_vec) {
             base_prices.emplace(std::get<0>(pair), std::get<1>(pair));
-            // base_prices.emplace(pair.at(0), pair.at(1));
         }
         for(auto const& pair: per_limb_prices_vec) {
             price_per_order_limb.emplace(std::get<0>(pair), std::get<1>(pair));
-            // price_per_order_limb.emplace(pair.at(0), pair.at(1));
         }
     }
     ~MultiplicationParameters()= default;
     MultiplicationParameters(const MultiplicationParameters&)= delete;
     MultiplicationParameters& operator=(const MultiplicationParameters&)= delete;
+};
+
+template<const unsigned char *data>
+class MultiexpParameters {
+public:
+  static MultiexpParameters& getInstance() {
+    static MultiexpParameters instance;
+    return instance;
+  }
+    u64 max_pairs;
+    u64 max_discount;
+    u64 multiplier;
+    std::unordered_map<u64, u64> dicsounts;
+private:
+    MultiexpParameters() {
+        auto prices_json = json::parse(reinterpret_cast<const char*>(data));
+        std::vector<std::pair<u64, u64>> discounts_vec = prices_json["discounts"];
+        for(auto const& pair: discounts_vec) {
+            dicsounts.emplace(std::get<0>(pair), std::get<1>(pair));
+        }
+        max_pairs = prices_json["max_pairs"];
+        max_discount = prices_json["max_discount"];
+        multiplier = prices_json["discount_multiplier"];
+    }
+    ~MultiexpParameters()= default;
+    MultiexpParameters(const MultiexpParameters&)= delete;
+    MultiexpParameters& operator=(const MultiexpParameters&)= delete;
 };
 
 template<const unsigned char *data, usize MAX>
@@ -101,19 +127,14 @@ public:
 private:
     MntParameters() {
         auto prices_json = json::parse(reinterpret_cast<const char*>(data));
-        // std::vector<std::vector<u64>> one_off_prices_vec = prices_json["one_off"];
         std::vector<std::pair<u64, u64>> one_off_prices_vec = prices_json["one_off"];
         std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> miller_prices_vec = prices_json["miller"];
         std::vector<std::pair<u64, std::vector<std::pair<u64, u64>>>> final_exp_prices_vec = prices_json["final_exp"];
-        // std::cout << miller_prices_vec << std::endl;
         for(auto const& pair: one_off_prices_vec) {
             one_off.emplace(std::get<0>(pair), std::get<1>(pair));
-            // one_off.emplace(pair.at(0), pair.at(1));
         }
         miller = miller_prices_vec;
         final_exp = final_exp_prices_vec;
-        // miller = prices_json["miller"];
-        // final_exp = prices_json["final_exp"];
         multiplier = prices_json["multiplier"];
     }
     ~MntParameters()= default;
@@ -496,6 +517,33 @@ u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs) 
     return result;
 }
 
+template<const unsigned char *data>
+u64 calculate_multiexp_metering(u64 modulus_limbs, u64 group_order_limbs, u64 num_pairs) {
+    u64 result = calculate_multiplication_metering<data>(modulus_limbs, group_order_limbs);
+    result = checked_mul(result, num_pairs);
+
+    u64 discount = 0;
+    if (num_pairs > MultiexpParameters<models_multiexp_discounts_json>::getInstance().max_pairs) {
+        discount = MultiexpParameters<models_multiexp_discounts_json>::getInstance().max_discount;
+    } else {
+        auto discount_per_num_pairs = MultiexpParameters<models_multiexp_discounts_json>::getInstance().dicsounts.find(num_pairs);
+        if (discount_per_num_pairs == MultiexpParameters<models_multiexp_discounts_json>::getInstance().dicsounts.end() ){
+            input_err("invalid number of pairs");
+        }    
+        discount = discount_per_num_pairs->second;
+    }
+
+    if (discount == 0) {
+        input_err("multiexp discount is zero");
+    }
+
+    result = checked_mul(result, discount);
+    auto multiplier = MultiexpParameters<models_multiexp_discounts_json>::getInstance().multiplier;
+    result = result / multiplier;
+    
+    return result;
+}
+
 template<const unsigned char *data, usize EXT, usize MAX>
 u64 calculate_mnt_metering(MntCurveData<EXT> curve_data) {
     u64 final_result = 0;
@@ -570,43 +618,67 @@ u64 calculate_mnt_metering(MntCurveData<EXT> curve_data) {
 
 template <usize N>
 u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
-    auto data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
+    auto const data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
     if (deserializer.ended()) {
         input_err("input is not long enough");
     }
     
     switch (data.extension_degree) {
         case 1:
-            return calculate_addition_metering<models_g1_addition_json>(u64(N));
+            return calculate_addition_metering<models_g1_addition_json>(data.modulus_limbs);
         case 2:
-            return calculate_addition_metering<models_g2_addition_ext2_json>(u64(N));
+            return calculate_addition_metering<models_g2_addition_ext2_json>(data.modulus_limbs);
         case 3:
-            return calculate_addition_metering<models_g2_addition_ext3_json>(u64(N));
+            return calculate_addition_metering<models_g2_addition_ext3_json>(data.modulus_limbs);
     }
     input_err("unknown extension degree");
 }
 
 template <usize N>
 u64 perform_multiplication_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
-    auto data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
+    auto const data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
     if (deserializer.ended()) {
         input_err("input is not long enough");
     }
 
     switch (data.extension_degree) {
         case 1:
-            return calculate_multiplication_metering<models_g1_multiplication_json>(u64(N), data.group_order_limbs);
+            return calculate_multiplication_metering<models_g1_multiplication_json>(data.modulus_limbs, data.group_order_limbs);
         case 2:
-            return calculate_multiplication_metering<models_g2_multiplication_ext2_json>(u64(N), data.group_order_limbs);
+            return calculate_multiplication_metering<models_g2_multiplication_ext2_json>(data.modulus_limbs, data.group_order_limbs);
         case 3:
-            return calculate_multiplication_metering<models_g2_multiplication_ext3_json>(u64(N), data.group_order_limbs);
+            return calculate_multiplication_metering<models_g2_multiplication_ext3_json>(data.modulus_limbs, data.group_order_limbs);
+    }
+    input_err("unknown extension degree");
+}
+
+template <usize N>
+u64 perform_multiexp_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
+    auto const data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
+    auto const num_pairs = deserializer.byte("Input is not long enough to get number of pairs");
+    if (num_pairs == 0)
+    {
+        input_err("Invalid number of pairs");
+    }
+
+    if (deserializer.ended()) {
+        input_err("input is not long enough");
+    }
+
+    switch (data.extension_degree) {
+        case 1:
+            return calculate_multiexp_metering<models_g1_multiplication_json>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs));
+        case 2:
+            return calculate_multiexp_metering<models_g2_multiplication_ext2_json>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs));
+        case 3:
+            return calculate_multiexp_metering<models_g2_multiplication_ext3_json>(data.modulus_limbs, data.group_order_limbs, u64(num_pairs));
     }
     input_err("unknown extension degree");
 }
 
 template <usize N, usize EXT>
 u64 perform_mnt_metering(u8 mod_byte_len, Deserializer deserializer) {
-    auto data = parse_mnt_data<N, EXT>(mod_byte_len, deserializer);
+    auto const data = parse_mnt_data<N, EXT>(mod_byte_len, deserializer);
     if (deserializer.ended()) {
         input_err("input is not long enough");
     }
@@ -623,7 +695,7 @@ u64 perform_mnt_metering(u8 mod_byte_len, Deserializer deserializer) {
 
 template <usize N>
 u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
-    auto data = parse_bls12_data<N>(mod_byte_len, deserializer);
+    auto const data = parse_bls12_data<N>(mod_byte_len, deserializer);
     if (deserializer.ended()) {
         input_err("input is not long enough");
     }
@@ -633,7 +705,7 @@ u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
 
 template <usize N>
 u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
-    auto data = parse_bn_data<N>(mod_byte_len, deserializer);
+    auto const data = parse_bn_data<N>(mod_byte_len, deserializer);
     if (deserializer.ended()) {
         input_err("input is not long enough");
     }
@@ -687,9 +759,12 @@ u64 perform_metering(u8 operation, std::optional<u8> curve_type, u8 mod_byte_len
                     return perform_multiplication_metering<N>(mod_byte_len, deserializer, true);
                 }
             case OPERATION_G1_MULTIEXP:
+                {
+                    return perform_multiexp_metering<N>(mod_byte_len, deserializer, false);
+                }
             case OPERATION_G2_MULTIEXP:
                 {
-                    return 1;
+                    return perform_multiexp_metering<N>(mod_byte_len, deserializer, true);
                 }
             default:
                 input_err("Unknown operation");

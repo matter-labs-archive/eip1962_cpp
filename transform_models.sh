@@ -19,3 +19,5 @@ echo 'static ' > eip1962cpp/src/mnt4_model.h
 xxd -i models/mnt4_model.json >> eip1962cpp/src/mnt4_model.h
 echo 'static ' > eip1962cpp/src/mnt6_model.h
 xxd -i models/mnt6_model.json >> eip1962cpp/src/mnt6_model.h
+echo 'static ' > eip1962cpp/src/multiexp_discounts.h
+xxd -i models/multiexp_discounts.json >> eip1962cpp/src/multiexp_discounts.h
