@@ -65,7 +65,7 @@ public:
         return num;
     }
 
-    void advance(u8 bytes, str &err)
+    void advance(usize bytes, str &err)
     {
         for (auto i = 0; i < bytes; i++)
         {
