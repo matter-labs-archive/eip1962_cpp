@@ -749,9 +749,9 @@ u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
     std::vector<u64> x_hamming;
     x_hamming.emplace_back(data.x_hamming);
 
-    miller_params.emplace_back(group_order_limbs);
     miller_params.emplace_back(x_bits);
     miller_params.emplace_back(x_hamming);
+    miller_params.emplace_back(group_order_limbs);
     miller_params.emplace_back(modulus_limbs_powers);
 
     u64 miller_cost = eval_model(miller_price_model, miller_params);
@@ -806,9 +806,9 @@ u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
     std::vector<u64> six_u_plus_two_hamming;
     six_u_plus_two_hamming.emplace_back(data.six_u_plus_two_hamming);
 
-    miller_params.emplace_back(group_order_limbs);
     miller_params.emplace_back(six_u_plus_two_bits);
     miller_params.emplace_back(six_u_plus_two_hamming);
+    miller_params.emplace_back(group_order_limbs);
     miller_params.emplace_back(modulus_limbs_powers);
 
     u64 miller_cost = eval_model(miller_price_model, miller_params);
