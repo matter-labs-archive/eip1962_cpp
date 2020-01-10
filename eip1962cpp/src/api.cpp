@@ -17,6 +17,10 @@ Main way of transferring errors originating from input is through exceptions whi
 There are no magic/hacks here, only templates.
 */
 
+const std::uint8_t pairing_result_false = 0;
+const std::uint8_t pairing_result_true = 1;
+
+
 // Executes non-pairing operation with given extension degree
 template <usize N, class F, class C>
 std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len, C const &extension, u8 extension_degree, Deserializer deserializer)
@@ -172,7 +176,7 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
 
     if (points.size() == 0) {
         std::vector<std::uint8_t> result;
-        result.push_back(1);
+        result.push_back(pairing_result_false);
         return result; // formally it's identity if all points are infinities
     }
 
@@ -193,11 +197,11 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     std::vector<std::uint8_t> result;
     if (pairing_result == one_fp12)
     {
-        result.push_back(1);
+        result.push_back(pairing_result_true);
     }
     else
     {
-        result.push_back(0);
+        result.push_back(pairing_result_false);
     }
     return result;
 }
@@ -265,7 +269,7 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
 
     if (points.size() == 0) {
         std::vector<std::uint8_t> result;
-        result.push_back(1);
+        result.push_back(pairing_result_false);
         return result; // formally it's identity if all points are infinities
     }
 
@@ -285,11 +289,11 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
     std::vector<std::uint8_t> result;
     if (pairing_result == one_fpk)
     {
-        result.push_back(1);
+        result.push_back(pairing_result_true);
     }
     else
     {
-        result.push_back(0);
+        result.push_back(pairing_result_false);
     }
     return result;
 }
