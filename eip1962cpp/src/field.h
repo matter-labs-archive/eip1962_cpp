@@ -29,9 +29,9 @@ public:
 
         Repr<N + 1> pow_N_LIMB_BITS = {0};
         pow_N_LIMB_BITS[N] = 1;
-        mont_r_ = pow_N_LIMB_BITS % modulus;
+        cbn::detail::assign(mont_r_, pow_N_LIMB_BITS % modulus);
 
-        mont_r2_ = (mont_r_ * mont_r_) % modulus;
+        cbn::detail::assign(mont_r2_, (mont_r_ * mont_r_) % modulus);
     }
 
     Repr<N> mod() const
@@ -60,7 +60,7 @@ public:
         return mont_inv_;
     }
 
-    bool is_valid(Repr<N> const &repr) const
+    bool is_valid(Repr<N> const repr) const
     {
         return repr < modulus;
     }

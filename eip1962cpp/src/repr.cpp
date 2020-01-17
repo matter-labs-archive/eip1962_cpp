@@ -1,15 +1,61 @@
 #include "repr.h"
 
+// // Calculate a - b - borrow, returning the result and modifying
+// // the borrow value.
+// u64 sbb(u64 a, u64 b, u64 &borrow)
+// {
+//     Repr<2> ar = {a, 1};
+//     Repr<2> br = {b, 0};
+//     Repr<2> borrowr = {borrow, 0};
+
+//     auto const tmp = (ar - br) - borrowr;
+//     if (tmp[1] == 0)
+//     {
+//         borrow = 1;
+//     }
+//     else
+//     {
+//         borrow = 0;
+//     };
+
+//     return tmp[0];
+// }
+
+// // Calculate a + b + carry, returning the sum and modifying the
+// // carry value.
+// u64 adc(u64 a, u64 b, u64 &carry)
+// {
+//     Repr<2> ar = {a, 0};
+//     Repr<2> br = {b, 0};
+//     Repr<2> carryr = {carry, 0};
+//     auto const tmp = ar + br + carryr;
+
+//     carry = tmp[1];
+
+//     return tmp[0];
+// }
+
+// // Calculate a * b + carry, returning the least significant digit
+// // and setting carry to the most significant digit.
+// u64 mul_with_carry(u64 a, u64 b, u64 &carry)
+// {
+//     Repr<1> ar = {a};
+//     Repr<1> br = {b};
+//     Repr<2> carryr = {carry, 0};
+//     auto const tmp = ar * br + carryr;
+
+//     carry = tmp[1];
+
+//     return tmp[0];
+// }
+
 // Calculate a - b - borrow, returning the result and modifying
 // the borrow value.
 u64 sbb(u64 a, u64 b, u64 &borrow)
 {
-    Repr<2> ar = {a, 1};
-    Repr<2> br = {b, 0};
-    Repr<2> borrowr = {borrow, 0};
-
-    auto const tmp = (ar - br) - borrowr;
-    if (tmp[1] == 0)
+    constexpr u128 base = u128(1) << 64;
+    auto const tmp = base + static_cast<u128>(a) - static_cast<u128>(b) - static_cast<u128>(borrow);
+    if (tmp >> 64 == 0)
     {
         borrow = 1;
     }
@@ -18,35 +64,29 @@ u64 sbb(u64 a, u64 b, u64 &borrow)
         borrow = 0;
     };
 
-    return tmp[0];
+    return tmp;
 }
 
 // Calculate a + b + carry, returning the sum and modifying the
 // carry value.
 u64 adc(u64 a, u64 b, u64 &carry)
 {
-    Repr<2> ar = {a, 0};
-    Repr<2> br = {b, 0};
-    Repr<2> carryr = {carry, 0};
-    auto const tmp = ar + br + carryr;
+    auto const tmp = static_cast<u128>(a) + static_cast<u128>(b) + static_cast<u128>(carry);
 
-    carry = tmp[1];
+    carry = tmp >> 64;
 
-    return tmp[0];
+    return tmp;
 }
 
 // Calculate a * b + carry, returning the least significant digit
 // and setting carry to the most significant digit.
 u64 mul_with_carry(u64 a, u64 b, u64 &carry)
 {
-    Repr<1> ar = {a};
-    Repr<1> br = {b};
-    Repr<2> carryr = {carry, 0};
-    auto const tmp = ar * br + carryr;
+    auto const tmp = static_cast<u128>(a) * static_cast<u128>(b) + static_cast<u128>(carry);
 
-    carry = tmp[1];
+    carry = tmp >> 64;
 
-    return tmp[0];
+    return tmp;
 }
 
 bool is_zero(std::vector<u64> const &repr)

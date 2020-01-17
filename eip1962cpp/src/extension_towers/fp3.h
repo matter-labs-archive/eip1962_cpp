@@ -2,7 +2,7 @@
 #define H_FP3
 
 #include "../common.h"
-#include "../element.h"
+// #include "../element.h"
 #include "../fp.h"
 #include "../field.h"
 #include "common.h"
@@ -28,7 +28,7 @@ public:
             auto const f_1 = calc_frobenius_factor(non_residue, field.mod(), 3, "Fp3");
 
             // NON_RESIDUE**(((q^2) - 1) / 3)
-            auto const f_2 = calc_frobenius_factor(non_residue, field.mod() * field.mod(), 3, "Fp3");
+            auto const f_2 = calc_frobenius_factor(non_residue, cbn::partial_mul<2*N>(field.mod(), field.mod()), 3, "Fp3");
 
             auto const f_0_c2 = f_0;
 
@@ -60,7 +60,7 @@ public:
 };
 
 template <usize N>
-class Fp3 : public Element<Fp3<N>>
+class Fp3 // : public Element<Fp3<N>>
 {
     FieldExtension3<N> const &field;
 
@@ -321,6 +321,34 @@ public:
     bool is_zero() const
     {
         return c0.is_zero() && c1.is_zero() && c2.is_zero();
+    }
+
+    template <usize M>
+    auto pow(Repr<M> const &e) const
+    {
+        auto res = one();
+        auto found_one = false;
+        auto const base = self();
+
+        for (auto it = RevBitIterator(e); it.before();)
+        {
+            auto i = *it;
+            if (found_one)
+            {
+                res.square();
+            }
+            else
+            {
+                found_one = i;
+            }
+
+            if (i)
+            {
+                res.mul(base);
+            }
+        }
+
+        return res;
     }
 
     bool operator==(Fp3<N> const &other) const

@@ -2,7 +2,7 @@
 #define H_FP6_2
 
 #include "../common.h"
-#include "../element.h"
+// #include "../element.h"
 #include "fp2.h"
 #include "fp3.h"
 #include "fpM2.h"
@@ -28,7 +28,7 @@ public:
             auto const f_2 = Fp<N>::zero(field);
 
             // NON_REDISUE**(((q^3) - 1) / 6)
-            auto const f_3 = calc_frobenius_factor(field.non_residue(), field.mod() * field.mod() * field.mod(), 6, "Fp6_2");
+            auto const f_3 = calc_frobenius_factor(field.non_residue(), cbn::partial_mul<3*N>(cbn::partial_mul<2*N>(field.mod(), field.mod()), field.mod()), 6, "Fp6_2");
 
             auto const f_4 = Fp<N>::zero(field);
             auto const f_5 = Fp<N>::zero(field);
@@ -116,6 +116,34 @@ public:
         return *this;
     }
 
+    template <usize M>
+    auto pow(Repr<M> const &e) const
+    {
+        auto res = one();
+        auto found_one = false;
+        auto const base = self();
+
+        for (auto it = RevBitIterator(e); it.before();)
+        {
+            auto i = *it;
+            if (found_one)
+            {
+                res.square();
+            }
+            else
+            {
+                found_one = i;
+            }
+
+            if (i)
+            {
+                res.mul(base);
+            }
+        }
+
+        return res;
+    }
+
     bool operator==(Fp6_2<N> const &other) const
     {
         return this->c0 == other.c0 && this->c1 == other.c1;
@@ -124,6 +152,43 @@ public:
     bool operator!=(Fp6_2<N> const &other) const
     {
         return !(*this == other);
+    }
+
+    auto cyclotomic_exp(std::vector<u64> const &exp) const
+    {
+        auto res = one();
+        auto self_inverse = self();
+        self_inverse.conjugate();
+
+        auto const base = self();
+
+        auto found_nonzero = false;
+        auto const naf = into_ternary_wnaf(exp);
+
+        for (auto it = naf.crbegin(); it != naf.crend(); it++)
+        {
+            auto const value = *it;
+            if (found_nonzero)
+            {
+                res.square();
+            }
+
+            if (value != 0)
+            {
+                found_nonzero = true;
+
+                if (value > 0)
+                {
+                    res.mul(base);
+                }
+                else
+                {
+                    res.mul(self_inverse);
+                }
+            }
+        }
+
+        return res;
     }
 };
 #endif

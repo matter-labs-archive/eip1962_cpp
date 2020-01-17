@@ -2,14 +2,14 @@
 #define H_FP
 
 #include "common.h"
-#include "element.h"
+// #include "element.h"
 #include "repr.h"
 #include "field.h"
 
 using namespace cbn::literals;
 
 template <usize N>
-class Fp : public Element<Fp<N>>
+class Fp // : public Element<Fp<N>>
 {
     PrimeField<N> const &field;
     Repr<N> repr;
@@ -34,10 +34,10 @@ public:
 
     auto operator=(Fp<N> const &other)
     {
-        this->repr = other.repr;
+        repr = other.repr;
     }
 
-    Repr<N> const &representation() const
+    Repr<N> const representation() const
     {
         return repr;
     }
@@ -70,14 +70,18 @@ public:
         return Fp::zero(field);
     }
 
-    Fp<N> &self()
+    Fp<N> self()
     {
-        return *this;
+        Fp<N> const s = *this;
+        return s;
+        // return this;
     }
 
-    Fp<N> const &self() const
+    Fp<N> const self() const
     {
-        return *this;
+        Fp<N> const s = *this;
+        return s;
+        // return this;
     }
 
     // Serializes bytes from number to BigEndian u8 format.
@@ -105,32 +109,36 @@ public:
         return mont_inverse();
     }
 
-    void square()
+    void inline square()
     {
-        repr = cbn::montgomery_mul(repr, repr, field.mod(), field.mont_inv());
+        repr = cbn::montgomery_square_alt(repr, field.mod(), field.mont_inv());
+        // repr = cbn::montgomery_square(repr, field.mod(), field.mont_inv());
+        // repr = cbn::montgomery_mul(repr, repr, field.mod(), field.mont_inv());
     }
 
-    void mul2()
+    void inline mul2()
     {
-        repr = cbn::shift_left(repr, 1) % field.mod();
+        repr = cbn::mod_add(repr, repr, field.mod());
+        // cbn::shift_left(repr, 1) % field.mod();
     }
 
-    void mul(Fp<N> const &e)
+    void inline mul(Fp<N> const e)
     {
+        // repr = cbn::montgomery_mul_alt(repr, e.repr, field.mod(), field.mont_inv());
         repr = cbn::montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
     }
 
-    void sub(Fp<N> const &e)
+    void inline sub(Fp<N> const e)
     {
         repr = cbn::mod_sub(repr, e.repr, field.mod());
     }
 
-    void add(Fp<N> const &e)
+    void inline add(Fp<N> const e)
     {
         repr = cbn::mod_add(repr, e.repr, field.mod());
     }
 
-    void negate()
+    void inline negate()
     {
         if (!is_zero())
         {
@@ -143,21 +151,69 @@ public:
         return cbn::is_zero(repr);
     }
 
-    bool operator==(Fp<N> const &other) const
+    bool operator==(Fp<N> const other) const
     {
         return repr == other.repr;
     }
 
-    bool operator!=(Fp<N> const &other) const
+    bool operator!=(Fp<N> const other) const
     {
         return repr != other.repr;
     }
 
     // *************** impl ************ //
+    template <usize M>
+    auto pow(Repr<M> const e) const
+    {
+        auto res = one();
+        auto const base = self();
+        auto found_one = false;
+
+        for (auto it = RevBitIterator(e); it.before();)
+        {
+            auto i = *it;
+            if (found_one)
+            {
+                res.square();
+            }
+            else
+            {
+                found_one = i;
+            }
+
+            if (i)
+            {
+                res.mul(base);
+            }
+        }
+
+        return res;
+    }
 
     bool is_non_nth_root(u64 n) const
     {
-        return this->is_non_nth_root_with(n, field.mod());
+        if (is_zero())
+        {
+            return false;
+        }
+
+        constexpr Repr<N> one = {1};
+
+        auto power = field.mod();
+        power = cbn::subtract_ignore_carry(power, one);
+        Repr<N> rdiv = {n};
+        auto const div_res = cbn::div(power, rdiv);
+        auto const rem = div_res.remainder;
+        if (!cbn::is_zero(rem))
+        {
+            return false;
+        }
+        power = div_res.quotient;
+
+        auto l = this->pow(power);
+        auto e_one = this->one();
+
+        return l != e_one;
     }
 
 private:

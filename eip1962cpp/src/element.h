@@ -51,6 +51,7 @@ public:
     {
         auto res = this->one();
         auto found_one = false;
+        auto base = this->self();
 
         for (auto it = RevBitIterator(e); it.before();)
         {
@@ -66,7 +67,7 @@ public:
 
             if (i)
             {
-                res.mul(self());
+                res.mul(base);
             }
         }
 
@@ -83,12 +84,14 @@ public:
 
         constexpr Repr<N> one = {1};
         power = cbn::subtract_ignore_carry(power, one);
-        Repr<N> divisor = {n};
-        if (!cbn::is_zero(power % divisor))
+        Repr<N> rdiv = {n};
+        auto const div_res = cbn::div(power, rdiv);
+        auto const rem = div_res.remainder;
+        if (!cbn::is_zero(rem))
         {
             return false;
         }
-        power = power / divisor;
+        power = div_res.quotient;
 
         auto l = this->pow(power);
         auto e_one = this->one();

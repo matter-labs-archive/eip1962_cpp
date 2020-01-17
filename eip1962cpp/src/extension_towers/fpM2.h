@@ -2,7 +2,7 @@
 #define H_FPM2
 
 #include "../common.h"
-#include "../element.h"
+// #include "../element.h"
 #include "fp2.h"
 #include "fp3.h"
 #include "../field.h"
@@ -10,7 +10,7 @@
 using namespace cbn::literals;
 
 template <class F, class E, class P, usize N>
-class FpM2 : public Element<P>
+class FpM2 // : public Element<P>
 {
 
 public:
@@ -27,40 +27,40 @@ public:
         c1 = other.c1;
     }
 
-    P cyclotomic_exp(std::vector<u64> const &exp) const
-    {
-        auto res = this->one();
-        auto self_inverse = this->self();
-        self_inverse.conjugate();
+    // P cyclotomic_exp(std::vector<u64> const &exp) const
+    // {
+    //     auto res = this->one();
+    //     auto self_inverse = this->self();
+    //     self_inverse.conjugate();
 
-        auto found_nonzero = false;
-        auto const naf = into_ternary_wnaf(exp);
+    //     auto found_nonzero = false;
+    //     auto const naf = into_ternary_wnaf(exp);
 
-        for (auto it = naf.crbegin(); it != naf.crend(); it++)
-        {
-            auto const value = *it;
-            if (found_nonzero)
-            {
-                res.square();
-            }
+    //     for (auto it = naf.crbegin(); it != naf.crend(); it++)
+    //     {
+    //         auto const value = *it;
+    //         if (found_nonzero)
+    //         {
+    //             res.square();
+    //         }
 
-            if (value != 0)
-            {
-                found_nonzero = true;
+    //         if (value != 0)
+    //         {
+    //             found_nonzero = true;
 
-                if (value > 0)
-                {
-                    res.mul(this->self());
-                }
-                else
-                {
-                    res.mul(self_inverse);
-                }
-            }
-        }
+    //             if (value > 0)
+    //             {
+    //                 res.mul(this->self());
+    //             }
+    //             else
+    //             {
+    //                 res.mul(self_inverse);
+    //             }
+    //         }
+    //     }
 
-        return res;
-    }
+    //     return res;
+    // }
 
     void conjugate()
     {

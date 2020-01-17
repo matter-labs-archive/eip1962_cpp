@@ -2,27 +2,25 @@
 #define H_FROBENIUS
 
 #include "../common.h"
-#include "../element.h"
+// #include "../element.h"
 #include "../fp.h"
 #include "../field.h"
 
 template <usize M>
-Repr<M + 1> calc_frobenius_power(Repr<M> const &base, usize div, std::string const &err)
+Repr<M> calc_frobenius_power(Repr<M> const &base, usize div, std::string const &err)
 {
     // NON_RESIDUE**(((base) - 1) / div)
     auto const q_power = base;
     constexpr Repr<M> one = {1};
-    auto power = q_power - one;
+    Repr<M> power = cbn::subtract_ignore_carry(q_power, one);
     Repr<M> const rdiv = {div};
     auto const div_res = cbn::div(power, rdiv);
     auto rem = div_res.remainder;
-    // if (!cbn::is_zero(power % rdiv))
     if (!cbn::is_zero(rem))
     {
         unknown_parameter_err("Failed to calculate Frobenius coeffs for " + err);
     }
     power = div_res.quotient;
-    // power = power / rdiv;
     return power;
 }
 
@@ -53,6 +51,36 @@ std::vector<F> calculate_window_table(F base, usize window)
 
     return table;
 }
+
+template <class C, typename F, usize N, usize M, usize EXT>
+class FrobeniusPrecomputation
+{
+    public:
+    std::array<F, EXT> elements;
+
+    FrobeniusPrecomputation(C const &field, F const &non_residue, Repr<N> const &modulus): elements( {F::zero(field), F::zero(field)} )
+    {
+        constexpr Repr<EXT*N> one = {1};
+        constexpr Repr<EXT*N> rdiv = {u64(M)};
+
+        Repr<EXT*N> q_power = {0};
+        cbn::detail::assign(q_power, modulus);
+        for (usize i = 0; i < EXT; i++) {
+            Repr<EXT*N> power = cbn::subtract_ignore_carry(q_power, one);
+            auto const div_res = cbn::div(power, rdiv);
+            auto const rem = div_res.remainder;
+            if (!cbn::is_zero(rem))
+            {
+                unknown_parameter_err("Failed to make Frobenius precomputation, modulus is not 1 mod " + std::to_string(M));
+            }
+            power = div_res.quotient;
+            elements[i] = non_residue.pow(power);
+            if (i != EXT - 1) {
+                q_power = cbn::partial_mul<EXT*N>(q_power, q_power);
+            }
+        }
+    }
+};
 
 template <class E>
 class WindowExpBase

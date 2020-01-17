@@ -193,17 +193,14 @@ public:
         }
     }
 
-    // Returnes multiple of this by a scalar.
+    // Returnes multiple of this by a scalar using mixed additions
     template <class C>
-    CurvePoint<E> mul(std::vector<u64> const &scalar, WeierstrassCurve<E> const &wc, C const &context) const
+    CurvePoint<E> mul_mixed_addition(std::vector<u64> const &scalar, WeierstrassCurve<E> const &wc, C const &context) const
     {
-        // Not using this is less performant, but for now it is simplier.
-        // if (z == x.one())
-        // {
-        //     return mul_mixed_addition(scalar, wc, context);
-        // }
+        assert(z == x.one());
 
         auto res = CurvePoint<E>::zero(context);
+        auto const base = *this;
         auto found_one = false;
         for (auto it = RevBitIterator(scalar); it.before();)
         {
@@ -219,12 +216,48 @@ public:
 
             if (i)
             {
-                res.add(*this, wc, context);
+                res.add_mixed(base, wc, context);
             }
         }
 
         return res;
     }
+
+    // Returnes multiple of this by a scalar.
+    template <class C>
+    CurvePoint<E> mul(std::vector<u64> const &scalar, WeierstrassCurve<E> const &wc, C const &context) const
+    {
+        // Not using this is less performant, but for now it is simplier.
+        if (z == x.one())
+        {
+            return mul_mixed_addition(scalar, wc, context);
+        }
+
+        auto res = CurvePoint<E>::zero(context);
+        auto const base = *this;
+        auto found_one = false;
+        for (auto it = RevBitIterator(scalar); it.before();)
+        {
+            auto i = *it;
+            if (found_one)
+            {
+                res.mul2(wc);
+            }
+            else
+            {
+                found_one = i;
+            }
+
+            if (i)
+            {
+                res.add(base, wc, context);
+            }
+        }
+
+        return res;
+    }
+
+    
 
     template <class C>
     void add(CurvePoint<E> const &b, WeierstrassCurve<E> const &wc, C const &context)

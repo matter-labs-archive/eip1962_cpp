@@ -126,11 +126,17 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     // Deser Extension6 & TwistType
     auto const e6_non_residue = deserialize_non_residue<Fp2<N>>(mod_byte_len, extension2, 6, deserializer);
     auto const twist_type = deserialize_pairing_twist_type(deserializer);
-    auto exp_base = WindowExpBase<Fp2<N>>(e6_non_residue, Fp2<N>::one(extension2), 8);
-    auto const extension6 = FieldExtension3over2(e6_non_residue, extension2, exp_base, true);
 
-    // Construct Extension12
-    auto const extension12 = FieldExtension2over3over2(extension6, exp_base, true);
+    FrobeniusPrecomputation<FieldExtension2<N>, Fp2<N>, N, 6, 2> const precomputation(extension2, e6_non_residue, field.mod());
+
+    auto const extension6 = FieldExtension3over2(e6_non_residue, extension2, precomputation, true);
+    auto const extension12 = FieldExtension2over3over2(extension6, precomputation, true);
+
+    // auto exp_base = WindowExpBase<Fp2<N>>(e6_non_residue, Fp2<N>::one(extension2), 8);
+    // auto const extension6 = FieldExtension3over2(e6_non_residue, extension2, exp_base, true);
+
+    // // Construct Extension12
+    // auto const extension12 = FieldExtension2over3over2(extension6, exp_base, true);
 
     // Compute Weierstrass 2
     auto const o_e6_non_residue_inv = e6_non_residue.inverse();

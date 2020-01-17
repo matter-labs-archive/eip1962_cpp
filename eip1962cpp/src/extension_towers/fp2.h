@@ -2,7 +2,7 @@
 #define H_FP2
 
 #include "../common.h"
-#include "../element.h"
+// #include "../element.h"
 #include "../fp.h"
 #include "../field.h"
 #include "common.h"
@@ -41,14 +41,14 @@ public:
         num.mul(_non_residue);
     }
 
-    Fp<N> const &non_residue() const
+    Fp<N> const non_residue() const
     {
         return _non_residue;
     }
 };
 
 template <usize N>
-class Fp2 : public Element<Fp2<N>>
+class Fp2 //: public Element<Fp2<N>>
 {
 public:
     FieldExtension2<N> const &field;
@@ -62,7 +62,7 @@ public:
         c1 = other.c1;
     }
 
-    void mul_by_fp(Fp<N> const &element)
+    void mul_by_fp(Fp<N> const element)
     {
         c0.mul(element);
         c1.mul(element);
@@ -94,14 +94,18 @@ public:
         return Fp2::zero(field);
     }
 
-    Fp2<N> &self()
+    Fp2<N> self()
     {
-        return *this;
+        Fp2<N> const s = *this;
+        return s;
+        // return *this;
     }
 
-    Fp2<N> const &self() const
+    Fp2<N> const self() const
     {
-        return *this;
+        Fp2<N> const s = *this;
+        return s;
+        // return *this;
     }
 
     void serialize(u8 mod_byte_len, std::vector<u8> &data) const
@@ -179,7 +183,7 @@ public:
         c1.mul2();
     }
 
-    void mul(Fp2<N> const &other)
+    void mul(Fp2<N> const other)
     {
         auto v0 = c0;
         v0.mul(other.c0);
@@ -197,13 +201,13 @@ public:
         c0.add(v1);
     }
 
-    void sub(Fp2<N> const &e)
+    void sub(Fp2<N> const e)
     {
         c0.sub(e.c0);
         c1.sub(e.c1);
     }
 
-    void add(Fp2<N> const &e)
+    void add(Fp2<N> const e)
     {
         c0.add(e.c0);
         c1.add(e.c1);
@@ -238,13 +242,58 @@ public:
 
     // *************** impl ************ //
 
+    template <usize M>
+    auto pow(Repr<M> const e) const
+    {
+        auto res = one();
+        auto found_one = false;
+        auto const base = self();
+
+        for (auto it = RevBitIterator(e); it.before();)
+        {
+            auto i = *it;
+            if (found_one)
+            {
+                res.square();
+            }
+            else
+            {
+                found_one = i;
+            }
+
+            if (i)
+            {
+                res.mul(base);
+            }
+        }
+
+        return res;
+    }
+
     bool is_non_nth_root(u64 n) const
     {
         if (is_zero())
         {
             return false;
         }
-        return this->is_non_nth_root_with(n, field.mod() * field.mod());
+
+        constexpr Repr<2*N> one = {1};
+
+        Repr<2*N> power = cbn::mul(field.mod(), field.mod());
+        power = cbn::subtract_ignore_carry(power, one);
+        Repr<2*N> rdiv = {n};
+        auto const div_res = cbn::div(power, rdiv);
+        auto const rem = div_res.remainder;
+        if (!cbn::is_zero(rem))
+        {
+            return false;
+        }
+        power = div_res.quotient;
+
+        auto l = this->pow(power);
+        auto e_one = this->one();
+
+        return l != e_one;
     }
 };
 

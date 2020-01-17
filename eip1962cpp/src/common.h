@@ -13,6 +13,8 @@
 #include <string>
 #include <iostream>
 
+#define EIP1962_ALWAYS_INLINE [[gnu::always_inline]]
+
 // **************** RUST equivalent TYPES for ease of porting, and is also shorter to write ******************** //
 using namespace std;
 
@@ -36,6 +38,8 @@ typedef std::int64_t i64;
 
 // C++ version of Rust usize
 typedef std::size_t usize;
+
+typedef __uint128_t u128;
 
 // C++ shortcut for Rust Option
 template <class T>

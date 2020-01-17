@@ -2,7 +2,7 @@
 #define H_FP6_3
 
 #include "../common.h"
-#include "../element.h"
+// #include "../element.h"
 #include "fp2.h"
 #include "fp3.h"
 #include "../field.h"
@@ -25,11 +25,55 @@ public:
             auto const q_power_1 = field.mod();
             auto const f_1 = base.exponentiate(calc_frobenius_power(q_power_1, 3, "Fp6"));
 
-            auto const q_power_2 = q_power_1 * field.mod();
+            auto const q_power_2 = cbn::partial_mul<2*N>(q_power_1, field.mod());
             auto const f_2 = base.exponentiate(calc_frobenius_power(q_power_2, 3, "Fp6"));
 
-            auto const q_power_3 = q_power_2 * field.mod();
+            auto const q_power_3 = cbn::partial_mul<3*N>(q_power_2, field.mod());
             auto const f_3 = base.exponentiate(calc_frobenius_power(q_power_3, 3, "Fp6"));
+
+            auto const f_4 = Fp2<N>::zero(field);
+            auto const f_5 = Fp2<N>::zero(field);
+
+            auto const f_0_c2 = f_0;
+
+            auto f_1_c2 = f_1;
+            f_1_c2.square();
+            auto f_2_c2 = f_2;
+            f_2_c2.square();
+            auto f_3_c2 = f_3;
+            f_3_c2.square();
+
+            auto const f_4_c2 = f_4;
+            auto const f_5_c2 = f_5;
+
+            std::array<Fp2<N>, 6> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2, f_3, f_4, f_5};
+            frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+            std::array<Fp2<N>, 6> calc_frobenius_coeffs_c2 = {f_0_c2, f_1_c2, f_2_c2, f_3_c2, f_4_c2, f_5_c2};
+            frobenius_coeffs_c2 = calc_frobenius_coeffs_c2;
+
+            frobenius_calculated = true;
+        }
+    }
+
+    FieldExtension3over2(Fp2<N> _non_residue, FieldExtension2<N> const &field, FrobeniusPrecomputation<FieldExtension2<N>, Fp2<N>, N, 6, 2> const &frobenius_precomputation, bool needs_frobenius) : FieldExtension2<N>(field), _non_residue(_non_residue), frobenius_coeffs_c1({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)}), frobenius_coeffs_c2({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)})
+    {
+        if (needs_frobenius) {
+            assert(frobenius_precomputation != null);
+            // 0
+            auto const f_0 = Fp2<N>::one(field);
+
+            // 1
+            auto f_1 = frobenius_precomputation.elements[0];
+            f_1.square();
+
+            // 2
+            auto f_2 = frobenius_precomputation.elements[1];
+            f_2.square();
+
+            // 3
+            auto f_3 = f_2;
+            f_3.frobenius_map(1);
+            f_3.mul(f_1);
 
             auto const f_4 = Fp2<N>::zero(field);
             auto const f_5 = Fp2<N>::zero(field);
@@ -67,7 +111,7 @@ public:
 };
 
 template <usize N>
-class Fp6_3 : public Element<Fp6_3<N>>
+class Fp6_3 // : public Element<Fp6_3<N>>
 {
 
 public:
@@ -384,6 +428,34 @@ public:
     bool is_zero() const
     {
         return c0.is_zero() && c1.is_zero() && c2.is_zero();
+    }
+
+    template <usize M>
+    auto pow(Repr<M> const &e) const
+    {
+        auto res = one();
+        auto found_one = false;
+        auto const base = self();
+
+        for (auto it = RevBitIterator(e); it.before();)
+        {
+            auto i = *it;
+            if (found_one)
+            {
+                res.square();
+            }
+            else
+            {
+                found_one = i;
+            }
+
+            if (i)
+            {
+                res.mul(base);
+            }
+        }
+
+        return res;
     }
 
     bool operator==(Fp6_3<N> const &other) const
