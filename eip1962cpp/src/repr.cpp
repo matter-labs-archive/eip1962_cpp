@@ -336,7 +336,8 @@ std::vector<i8> into_ternary_wnaf(std::vector<u64> const &repr)
                 add_nocarry(e, u64(-z));
             }
         }
-        div2(e);
+        right_shift(e, 1);
+        // div2(e);
         res.push_back(i8(z));
     }
 
