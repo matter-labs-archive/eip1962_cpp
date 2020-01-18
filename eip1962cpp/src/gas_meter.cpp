@@ -476,7 +476,7 @@ std::vector<u64> make_powers(u64 value, u64 max_power) {
     u64 p = 1;
     for (auto i = 0; i < max_power; i++) {
         p = checked_mul(p, value);
-        powers.emplace_back(p);
+        powers.push_back(p);
     }
 
     return powers;
@@ -593,18 +593,18 @@ u64 calculate_mnt_metering(MntCurveData<EXT> curve_data, const std::string &mode
     miller_params.reserve(4);
 
     std::vector<u64> group_order_limbs;
-    group_order_limbs.emplace_back(curve_data.group_order_limbs);
+    group_order_limbs.push_back(curve_data.group_order_limbs);
 
     std::vector<u64> ate_loop_bits;
-    ate_loop_bits.emplace_back(curve_data.ate_loop_bits);
+    ate_loop_bits.push_back(curve_data.ate_loop_bits);
 
     std::vector<u64> ate_loop_hamming;
-    ate_loop_hamming.emplace_back(curve_data.ate_loop_hamming);
+    ate_loop_hamming.push_back(curve_data.ate_loop_hamming);
 
-    miller_params.emplace_back(group_order_limbs);
-    miller_params.emplace_back(ate_loop_bits);
-    miller_params.emplace_back(ate_loop_hamming);
-    miller_params.emplace_back(modulus_limbs_powers);
+    miller_params.push_back(group_order_limbs);
+    miller_params.push_back(ate_loop_bits);
+    miller_params.push_back(ate_loop_hamming);
+    miller_params.push_back(modulus_limbs_powers);
 
     u64 miller_cost = eval_model(miller_price_model, miller_params);
     miller_cost = checked_mul(miller_cost, curve_data.num_pairs);
@@ -615,22 +615,22 @@ u64 calculate_mnt_metering(MntCurveData<EXT> curve_data, const std::string &mode
     final_exp_params.reserve(5);
 
     std::vector<u64> w0_bits;
-    w0_bits.emplace_back(curve_data.w0_bits);
+    w0_bits.push_back(curve_data.w0_bits);
 
     std::vector<u64> w0_hamming;
-    w0_hamming.emplace_back(curve_data.w0_hamming);
+    w0_hamming.push_back(curve_data.w0_hamming);
 
     std::vector<u64> w1_bits;
-    w1_bits.emplace_back(curve_data.w1_bits);
+    w1_bits.push_back(curve_data.w1_bits);
 
     std::vector<u64> w1_hamming;
-    w1_hamming.emplace_back(curve_data.w1_hamming);
+    w1_hamming.push_back(curve_data.w1_hamming);
 
-    final_exp_params.emplace_back(w0_bits);
-    final_exp_params.emplace_back(w0_hamming);
-    final_exp_params.emplace_back(w1_bits);
-    final_exp_params.emplace_back(w1_hamming);
-    final_exp_params.emplace_back(modulus_limbs_powers);
+    final_exp_params.push_back(w0_bits);
+    final_exp_params.push_back(w0_hamming);
+    final_exp_params.push_back(w1_bits);
+    final_exp_params.push_back(w1_hamming);
+    final_exp_params.push_back(modulus_limbs_powers);
 
     u64 final_exp_cost = eval_model(final_ext_price_model, final_exp_params);
 
@@ -741,18 +741,18 @@ u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
     miller_params.reserve(4);
 
     std::vector<u64> group_order_limbs;
-    group_order_limbs.emplace_back(data.group_order_limbs);
+    group_order_limbs.push_back(data.group_order_limbs);
 
     std::vector<u64> x_bits;
-    x_bits.emplace_back(data.x_bits);
+    x_bits.push_back(data.x_bits);
 
     std::vector<u64> x_hamming;
-    x_hamming.emplace_back(data.x_hamming);
+    x_hamming.push_back(data.x_hamming);
 
-    miller_params.emplace_back(x_bits);
-    miller_params.emplace_back(x_hamming);
-    miller_params.emplace_back(group_order_limbs);
-    miller_params.emplace_back(modulus_limbs_powers);
+    miller_params.push_back(x_bits);
+    miller_params.push_back(x_hamming);
+    miller_params.push_back(group_order_limbs);
+    miller_params.push_back(modulus_limbs_powers);
 
     u64 miller_cost = eval_model(miller_price_model, miller_params);
     miller_cost = checked_mul(miller_cost, data.num_pairs);
@@ -762,9 +762,9 @@ u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
     std::vector<std::vector<u64>> final_exp_params;
     final_exp_params.reserve(3);
 
-    final_exp_params.emplace_back(x_bits);
-    final_exp_params.emplace_back(x_hamming);
-    final_exp_params.emplace_back(modulus_limbs_powers);
+    final_exp_params.push_back(x_bits);
+    final_exp_params.push_back(x_hamming);
+    final_exp_params.push_back(modulus_limbs_powers);
 
     u64 final_exp_cost = eval_model(final_ext_price_model, final_exp_params);
 
@@ -798,18 +798,18 @@ u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
     miller_params.reserve(4);
 
     std::vector<u64> group_order_limbs;
-    group_order_limbs.emplace_back(data.group_order_limbs);
+    group_order_limbs.push_back(data.group_order_limbs);
 
     std::vector<u64> six_u_plus_two_bits;
-    six_u_plus_two_bits.emplace_back(data.six_u_plus_two_bits);
+    six_u_plus_two_bits.push_back(data.six_u_plus_two_bits);
 
     std::vector<u64> six_u_plus_two_hamming;
-    six_u_plus_two_hamming.emplace_back(data.six_u_plus_two_hamming);
+    six_u_plus_two_hamming.push_back(data.six_u_plus_two_hamming);
 
-    miller_params.emplace_back(six_u_plus_two_bits);
-    miller_params.emplace_back(six_u_plus_two_hamming);
-    miller_params.emplace_back(group_order_limbs);
-    miller_params.emplace_back(modulus_limbs_powers);
+    miller_params.push_back(six_u_plus_two_bits);
+    miller_params.push_back(six_u_plus_two_hamming);
+    miller_params.push_back(group_order_limbs);
+    miller_params.push_back(modulus_limbs_powers);
 
     u64 miller_cost = eval_model(miller_price_model, miller_params);
     miller_cost = checked_mul(miller_cost, data.num_pairs);
@@ -820,14 +820,14 @@ u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
     final_exp_params.reserve(3);
 
     std::vector<u64> u_bits;
-    u_bits.emplace_back(data.u_bits);
+    u_bits.push_back(data.u_bits);
 
     std::vector<u64> u_hamming;
-    u_hamming.emplace_back(data.u_hamming);
+    u_hamming.push_back(data.u_hamming);
 
-    final_exp_params.emplace_back(u_bits);
-    final_exp_params.emplace_back(u_hamming);
-    final_exp_params.emplace_back(modulus_limbs_powers);
+    final_exp_params.push_back(u_bits);
+    final_exp_params.push_back(u_hamming);
+    final_exp_params.push_back(modulus_limbs_powers);
 
     u64 final_exp_cost = eval_model(final_ext_price_model, final_exp_params);
 

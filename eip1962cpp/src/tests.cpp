@@ -184,3 +184,17 @@ int main()
     tests();
     std::cout << "Done testing" << std::endl;
 }
+
+// #include <benchmark/benchmark.h>
+
+// static void BM_TrivialArith(benchmark::State& state) {
+//   // Perform setup here
+//   for (auto _ : state) {
+//     // This code gets timed
+//     SomeFunction();
+//   }
+// }
+// // Register the function as a benchmark
+// BENCHMARK(BM_SomeFunction);
+// // Run the benchmark
+// BENCHMARK_MAIN();

@@ -84,7 +84,9 @@ void mul_scalar(std::vector<u64> &repr, u64 scalar);
 
 void right_shift(std::vector<u64> &repr, u64 shift);
 
-std::vector<i64> into_ternary_wnaf(std::vector<u64> const &repr);
+std::vector<i8> into_ternary_wnaf(std::vector<u64> const &repr);
+
+std::vector<i64> into_wnaf(std::vector<u64> const &repr, usize window);
 
 u32 calculate_hamming_weight(std::vector<u64> const &repr);
 

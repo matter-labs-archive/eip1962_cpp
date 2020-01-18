@@ -114,13 +114,14 @@ bool is_odd(std::vector<u64> const &repr)
 
 void div2(std::vector<u64> &repr)
 {
-    auto t = 0;
-    for (auto it = repr.rbegin(); it != repr.rend(); it++)
+    u64 t = 0;
+    for (auto it = repr.rbegin(); it != repr.rend(); ++it)
     {
-        auto const t2 = *it << 63;
-        *it >>= 1;
-        *it |= t;
-        t = t2;
+        u64 t2 = *it;
+        t2 <<= 63; // bottom bit of the current
+        *it >>= 1; // actually shift this
+        *it |= t; // place top bit if necessary
+        t = t2; // safe bottop bit to be the next top one
     }
 }
 
@@ -302,8 +303,49 @@ void right_shift(std::vector<u64> &repr, u64 shift)
     repr[num_libs - 1] = repr[num_libs - 1] >> shift;
 }
 
-std::vector<i64> into_ternary_wnaf(std::vector<u64> const &repr)
+std::vector<i8> into_ternary_wnaf(std::vector<u64> const &repr)
 {
+    std::vector<i8> res;
+
+    if (repr.size() == 0)
+    {
+        return res;
+    }
+
+    res.reserve(repr.size() * 64 + 2);
+
+    std::vector<u64> e = repr;
+
+    constexpr u64 WINDOW = u64(1);
+    constexpr u64 MIDPOINT = u64(1) << WINDOW;
+    constexpr i64 MIDPOINT_I64 = MIDPOINT;
+    constexpr u64 MASK = (u64(1) << (WINDOW + 1)) - 1;
+
+    while (!is_zero(e))
+    {
+        i64 z = 0;
+        if (is_odd(e))
+        {
+            z = MIDPOINT_I64 - (i64(e[0] & MASK));
+            if (z > 0)
+            {
+                sub_noborrow(e, u64(z));
+            }
+            else
+            {
+                add_nocarry(e, u64(-z));
+            }
+        }
+        div2(e);
+        res.push_back(i8(z));
+    }
+
+    return res;
+}
+
+std::vector<i64> into_wnaf(std::vector<u64> const &repr, usize window)
+{
+    assert(window > 0);
     std::vector<i64> res;
 
     if (repr.size() == 0)
@@ -311,30 +353,33 @@ std::vector<i64> into_ternary_wnaf(std::vector<u64> const &repr)
         return res;
     }
 
-    std::vector<u64> e = repr;
+    res.reserve(repr.size() * 64 + 2);
 
-    constexpr u64 WINDOW = u64(1);
-    constexpr u64 MIDPOINT = u64(1) << WINDOW;
-    constexpr i64 MIDPOINT_I64 = MIDPOINT;
-    constexpr u64 MASK = u64(1) << (WINDOW + 1);
+    std::vector<u64> e(repr);
+
+    const i64 max = i64(1 << window);
+    const i64 midpoint = i64(1 << (window - 1));
+    const u64 modulus_mask = (1 << window) - 1;
 
     while (!is_zero(e))
     {
         i64 z = 0;
         if (is_odd(e))
         {
-            z = MIDPOINT_I64 - (i64(e[0] % MASK));
-            if (z >= 0)
+            z = i64(e[0] & modulus_mask);
+            if (z > midpoint)
             {
-                sub_noborrow(e, z);
+                z -= max;
+                add_nocarry(e, u64(-z));
             }
             else
             {
-                add_nocarry(e, (-z));
+                sub_noborrow(e, u64(z));
             }
         }
+        right_shift(e, 1);
+        // div2(e);
         res.push_back(z);
-        div2(e);
     }
 
     return res;

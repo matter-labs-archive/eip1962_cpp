@@ -5,7 +5,7 @@ fn main() {
     {
         cc::Build::new()
             .cpp(true) // Switch to C++ library compilation.
-            .flag("-std=c++1z")
+            .flag("-std=c++17")
             .flag("-static-libstdc++")
             .include("eip1962cpp/include")
             .file("eip1962cpp/src/api.cpp")

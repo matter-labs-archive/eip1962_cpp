@@ -139,7 +139,9 @@ public:
     template <class C>
     bool check_correct_subgroup(WeierstrassCurve<E> const &wc, C const &context) const
     {
-        auto const p = mul(wc.subgroup_order(), wc, context);
+        // auto const p = mul(wc.subgroup_order(), wc, context);
+
+        auto const p = wnaf_mul(wc.subgroup_order(), wc, context);
 
         return p.is_zero();
     }
@@ -257,7 +259,63 @@ public:
         return res;
     }
 
-    
+    // Returnes multiple of this by a scalar.
+    template <class C>
+    CurvePoint<E> wnaf_mul(std::vector<u64> const &scalar, WeierstrassCurve<E> const &wc, C const &context) const
+    {
+        constexpr usize WINDOW_SIZE = 3;
+
+        std::vector<CurvePoint<E>> precomp_table;
+        precomp_table.resize(1 << (WINDOW_SIZE - 1), CurvePoint<E>::zero(context));
+
+        auto const index_for_positive = (1 << (WINDOW_SIZE-2));
+
+        auto two_self = *this;
+        two_self.mul2(wc);
+
+        auto precomp = *this;
+        precomp_table[index_for_positive] = precomp;
+
+        auto negative_precomp = *this;
+        negative_precomp.negate();
+        precomp_table[index_for_positive-1] = negative_precomp;
+
+        for (auto i = 1; i < index_for_positive; i++) {
+            precomp.add(two_self, wc, context);
+            precomp_table[index_for_positive+i] = precomp;
+            auto neg_precomp = precomp;
+            neg_precomp.negate();
+            precomp_table[index_for_positive-1-i] = neg_precomp;
+        }
+
+        std::vector<i64> const wnaf = into_wnaf(scalar, WINDOW_SIZE);
+
+        auto res = CurvePoint<E>::zero(context);
+        auto found_one = false;
+
+        for (auto rit = wnaf.crbegin(); rit != wnaf.crend(); ++rit)
+        {
+            auto i = *rit;
+            if (found_one)
+            {
+                res.mul2(wc);
+            }
+
+            if (i)
+            {   
+                found_one = true;
+                if (i > 0) {
+                    usize const idx = usize(i) >> 1;
+                    res.add(precomp_table[index_for_positive + idx], wc, context);
+                } else if (i < 0) {
+                    usize const idx = usize(-i) >> 1;
+                    res.add(precomp_table[index_for_positive - 1 - idx], wc, context);
+                }
+            }
+        }
+
+        return res;
+    }
 
     template <class C>
     void add(CurvePoint<E> const &b, WeierstrassCurve<E> const &wc, C const &context)

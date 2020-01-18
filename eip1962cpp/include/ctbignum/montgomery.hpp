@@ -180,6 +180,7 @@ constexpr auto montgomery_mul(big_int<N, T> x, big_int<N, T> y, big_int<N, T> m,
   using TT = typename dbl_bitlen<T>::type;
   big_int<N + 1, T> A{};
 
+  #pragma unroll (N)
   for (auto i = 0; i < N; ++i) {
     T u_i = (A[0] + x[i] * y[0]) * mprime;
 
@@ -192,6 +193,7 @@ constexpr auto montgomery_mul(big_int<N, T> x, big_int<N, T> y, big_int<N, T> m,
     k = z >> std::numeric_limits<T>::digits;
     k2 = z2 >> std::numeric_limits<T>::digits;
 
+    #pragma unroll (N)
     for (auto j = 1; j < N; ++j) {
       TT t = static_cast<TT>(y[j]) * static_cast<TT>(x[i]) + A[j] + k;
       TT t2 = static_cast<TT>(m[j]) * static_cast<TT>(u_i) + static_cast<T>(t) + k2;
@@ -209,6 +211,54 @@ constexpr auto montgomery_mul(big_int<N, T> x, big_int<N, T> y, big_int<N, T> m,
   if (A >= padded_mod)
     A = subtract_ignore_carry(A, padded_mod);
   return first<N>(A);
+}
+
+/// Note: the type of the last parameter is not deduced from itself, but from
+/// the other parameters instead.
+template <typename T, std::size_t N>
+static inline void inplace_montgomery_mul(big_int<N, T> &x, big_int<N, T> const &y, big_int<N, T> const &m,
+                              Identity_t<T> mprime) {
+
+  // Montgomery multiplication with runtime parameters
+
+  using detail::skip;
+  using detail::first;
+  using detail::pad;
+
+  using TT = typename dbl_bitlen<T>::type;
+  big_int<N + 1, T> A{};
+
+  #pragma unroll (N)
+  for (auto i = 0; i < N; ++i) {
+    T u_i = (A[0] + x[i] * y[0]) * mprime;
+
+    // A += x[i] * y + u_i * m followed by a 1 limb-shift to the right
+    T k = 0;
+    T k2 = 0;
+
+    TT z = static_cast<TT>(y[0]) * static_cast<TT>(x[i]) + A[0] + k;
+    TT z2 = static_cast<TT>(m[0]) * static_cast<TT>(u_i) + static_cast<T>(z) + k2;
+    k = z >> std::numeric_limits<T>::digits;
+    k2 = z2 >> std::numeric_limits<T>::digits;
+
+    #pragma unroll (N)
+    for (auto j = 1; j < N; ++j) {
+      TT t = static_cast<TT>(y[j]) * static_cast<TT>(x[i]) + A[j] + k;
+      TT t2 = static_cast<TT>(m[j]) * static_cast<TT>(u_i) + static_cast<T>(t) + k2;
+      A[j-1] = t2;
+      k = t >> std::numeric_limits<T>::digits;
+      k2 = t2 >> std::numeric_limits<T>::digits;
+    }
+
+    TT tmp = static_cast<TT>(A[N]) + k + k2;
+    A[N-1] = tmp;
+    A[N] = tmp >> std::numeric_limits<T>::digits;
+  }
+
+  auto padded_mod = pad<1>(m);
+  if (A >= padded_mod)
+    A = subtract_ignore_carry(A, padded_mod);
+  x = first<N>(A);
 }
 
 // Calculate a + b + carry, returning the sum and modifying the
@@ -284,11 +334,13 @@ constexpr auto montgomery_reduction_alt(big_int<N*2, T> A, big_int<N, T> m,
 
   T carry2 = 0;
 
+  #pragma unroll (N)
   for (auto i = 0; i < N; i++) {
     T carry = 0;
 
     T k = A[i] * mprime;
 
+    #pragma unroll (N)
     for (auto j = 0; j < N; j++) {
       A[i + j] = mac_with_carry(A[i + j], k, m[j], carry);
     }
@@ -360,9 +412,11 @@ constexpr auto montgomery_square_alt(big_int<N, T> x, big_int<N, T> m,
   // Montgomery multiplication with runtime parameters
   big_int<N*2, T> A{};
 
+  #pragma unroll (N)
   for (auto i = 0; i < N; i++) {
 		T carry = 0;
 		T thisLimb = x[i];
+    #pragma unroll (N)
 		for (auto k = i + 1; k < N; k++) {
 			A[k + i] = mac_with_carry(A[k + i], thisLimb, x[k], carry);
 		}
@@ -371,6 +425,7 @@ constexpr auto montgomery_square_alt(big_int<N, T> x, big_int<N, T> m,
   constexpr auto width_minus_one = std::numeric_limits<T>::digits - 1;
 
   A[2*N - 1] = A[2*N - 2] >> width_minus_one;
+  #pragma unroll (N)
   for (auto i = 2*N - 2; i >= 2; i--) {
     A[i] = (A[i] << 1) | (A[i-1] >> width_minus_one);
   }
@@ -379,6 +434,7 @@ constexpr auto montgomery_square_alt(big_int<N, T> x, big_int<N, T> m,
   T carry = 0;
   constexpr T zero = 0;
 
+  #pragma unroll (N)
   for (auto i = 0; i < N; i++) {
     T thisLimb = x[i];
     auto const idx = i * 2;

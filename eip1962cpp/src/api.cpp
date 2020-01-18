@@ -88,6 +88,7 @@ std::vector<std::uint8_t> run_operation_extension(u8 operation, u8 mod_byte_len,
         }
 
         std::vector<std::tuple<CurvePoint<F>, std::vector<u64>>> pairs;
+        pairs.reserve(num_pairs);
 
         for (auto i = 0; i < num_pairs; i++)
         {

@@ -18,6 +18,9 @@
 // **************** RUST equivalent TYPES for ease of porting, and is also shorter to write ******************** //
 using namespace std;
 
+// C++ version of Rust i8
+typedef std::int8_t i8;
+
 // C++ version of Rust u8
 typedef std::uint8_t u8;
 

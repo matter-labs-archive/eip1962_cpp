@@ -32,7 +32,7 @@ public:
 
     Fp(Fp<N> const &other) : Fp(other.repr, other.field) {}
 
-    auto operator=(Fp<N> const &other)
+    auto inline operator=(Fp<N> const &other)
     {
         repr = other.repr;
     }
@@ -70,14 +70,14 @@ public:
         return Fp::zero(field);
     }
 
-    Fp<N> self()
+    Fp<N> inline self()
     {
         Fp<N> const s = *this;
         return s;
         // return this;
     }
 
-    Fp<N> const self() const
+    Fp<N> inline const self() const
     {
         Fp<N> const s = *this;
         return s;
@@ -111,21 +111,22 @@ public:
 
     void inline square()
     {
-        repr = cbn::montgomery_square_alt(repr, field.mod(), field.mont_inv());
+        // repr = cbn::montgomery_square_alt(repr, field.mod(), field.mont_inv());
         // repr = cbn::montgomery_square(repr, field.mod(), field.mont_inv());
-        // repr = cbn::montgomery_mul(repr, repr, field.mod(), field.mont_inv());
+        repr = cbn::montgomery_mul(repr, repr, field.mod(), field.mont_inv());
     }
 
     void inline mul2()
     {
         repr = cbn::mod_add(repr, repr, field.mod());
-        // cbn::shift_left(repr, 1) % field.mod();
     }
 
     void inline mul(Fp<N> const e)
     {
         // repr = cbn::montgomery_mul_alt(repr, e.repr, field.mod(), field.mont_inv());
-        repr = cbn::montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
+        
+        cbn::inplace_montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
+        // repr = cbn::montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
     }
 
     void inline sub(Fp<N> const e)
@@ -146,17 +147,17 @@ public:
         }
     }
 
-    bool is_zero() const
+    bool inline is_zero() const
     {
         return cbn::is_zero(repr);
     }
 
-    bool operator==(Fp<N> const other) const
+    bool inline operator==(Fp<N> const other) const
     {
         return repr == other.repr;
     }
 
-    bool operator!=(Fp<N> const other) const
+    bool inline operator!=(Fp<N> const other) const
     {
         return repr != other.repr;
     }

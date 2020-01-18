@@ -31,7 +31,7 @@ public:
         pow_N_LIMB_BITS[N] = 1;
         cbn::detail::assign(mont_r_, pow_N_LIMB_BITS % modulus);
 
-        cbn::detail::assign(mont_r2_, (mont_r_ * mont_r_) % modulus);
+        cbn::detail::assign(mont_r2_, cbn::partial_mul<2*N>(mont_r_, mont_r_) % modulus);
     }
 
     Repr<N> mod() const
