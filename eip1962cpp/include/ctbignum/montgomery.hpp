@@ -264,8 +264,7 @@ static inline void inplace_montgomery_mul(big_int<N, T> &x, big_int<N, T> const 
 // Calculate a + b + carry, returning the sum and modifying the
 // carry value.
 template <typename T>
-CBN_ALWAYS_INLINE
-constexpr T adc(T a, T b, T &carry)
+static inline constexpr T adc(T a, T b, T &carry)
 {
   using TT = typename dbl_bitlen<T>::type;
   auto const tmp = static_cast<TT>(a) + static_cast<TT>(b) + static_cast<TT>(carry);
@@ -275,10 +274,29 @@ constexpr T adc(T a, T b, T &carry)
   return tmp;
 }
 
+// Calculate a - b - borrow, returning the result and modifying
+// the borrow value.
+template <typename T>
+static inline constexpr T sbb(T a, T b, T &borrow)
+{
+  using TT = typename dbl_bitlen<T>::type;
+  constexpr TT base = TT(1) << std::numeric_limits<T>::digits;;
+  auto const tmp = base + static_cast<u128>(a) - static_cast<u128>(b) - static_cast<u128>(borrow);
+  if ((tmp >> std::numeric_limits<T>::digits) == 0)
+  {
+      borrow = 1;
+  }
+  else
+  {
+      borrow = 0;
+  };
+
+  return tmp;
+}
+
 /// A + B * C + carry
 template <typename T>
-CBN_ALWAYS_INLINE
-constexpr T mac_with_carry(T a, T b, T c, T &carry)
+static inline constexpr T mac_with_carry(T a, T b, T c, T &carry)
 {
   using TT = typename dbl_bitlen<T>::type;
   auto const tmp = static_cast<TT>(a) + static_cast<TT>(b) * static_cast<TT>(c) + static_cast<TT>(carry);
@@ -312,6 +330,31 @@ constexpr auto montgomery_mul_alt(big_int<N, T> x, big_int<N, T> y, big_int<N, T
   }
 
   return montgomery_reduction_alt(A, m, mprime);
+}
+
+/// Note: the type of the last parameter is not deduced from itself, but from
+/// the other parameters instead.
+template <typename T, std::size_t N>
+static inline constexpr void inplace_montgomery_mul_alt(big_int<N, T> & x, big_int<N, T> const & y, big_int<N, T> const & m,
+                              Identity_t<T> mprime) {
+
+  // Montgomery multiplication with runtime parameters
+
+  using TT = typename dbl_bitlen<T>::type;
+  big_int<2*N, T> A{};
+
+  // trivial multiplication
+  for (auto i = 0; i < N; i++) {
+    T x_i = x[i];
+    T carry = 0;
+    for (auto j = 0; j < N; j++) {
+      A[i + j] = mac_with_carry(A[i+j], y[j], x_i, carry);
+    }
+
+    A[N + i] = carry;
+  }
+
+  inplace_montgomery_reduction_alt(x, A, m, mprime);
 }
 
 /// Note: the type of the last parameter is not deduced from itself, but from
@@ -353,6 +396,47 @@ constexpr auto montgomery_reduction_alt(big_int<N*2, T> A, big_int<N, T> m,
   if (R >= m)
     R = subtract_ignore_carry(R, m);
   return R;
+}
+
+/// Note: the type of the last parameter is not deduced from itself, but from
+/// the other parameters instead.
+template <typename T, std::size_t N>
+static inline constexpr void inplace_montgomery_reduction_alt(big_int<N, T> & x, big_int<N*2, T> A, big_int<N, T> const & m,
+                                    Identity_t<T> mprime) {
+  // Montgomery reduction with runtime parameters
+  //
+  // inputs:
+  //  A       (2n limbs)  number to be reduced
+  //  m       ( n limbs)  modulus
+  //  mprime  (uint64_t)  mprime = - m^{-1} mod 2^64
+  //
+  // output:
+  //  T R^-1 mod m,       where R = (2^64)^n
+  //
+
+  using detail::skip;
+
+  T carry2 = 0;
+
+  #pragma unroll (N)
+  for (auto i = 0; i < N; i++) {
+    T carry = 0;
+
+    T k = A[i] * mprime;
+
+    #pragma unroll (N)
+    for (auto j = 0; j < N; j++) {
+      A[i + j] = mac_with_carry(A[i + j], k, m[j], carry);
+    }
+    A[N + i] = adc(A[N + i], carry2, carry);
+    carry2 = carry;
+  }
+
+  x = skip<N>(A);
+
+  if (x >= m) {
+    inplace_subtract_ignore_carry(x, m);
+  }
 }
 
 /// Note: the type of the last parameter is not deduced from itself, but from
@@ -444,6 +528,49 @@ constexpr auto montgomery_square_alt(big_int<N, T> x, big_int<N, T> m,
   }
 
   return montgomery_reduction_alt(A, m, mprime);
+}
+
+/// Note: the type of the last parameter is not deduced from itself, but from
+/// the other parameters instead.
+template <typename T, std::size_t N>
+static inline constexpr void inplace_montgomery_square_alt(big_int<N, T> & x, big_int<N, T> const & m,
+                              Identity_t<T> mprime) {
+
+  // Montgomery multiplication with runtime parameters
+  big_int<N*2, T> A{};
+
+  #pragma unroll (N)
+  for (auto i = 0; i < N; i++) {
+		T carry = 0;
+		T thisLimb = x[i];
+    #pragma unroll (N)
+		for (auto k = i + 1; k < N; k++) {
+			A[k + i] = mac_with_carry(A[k + i], thisLimb, x[k], carry);
+		}
+		A[N+i] = carry;
+	}
+  constexpr auto width_minus_one = std::numeric_limits<T>::digits - 1;
+
+  A[2*N - 1] = A[2*N - 2] >> width_minus_one;
+  #pragma unroll (N)
+  for (auto i = 2*N - 2; i >= 2; i--) {
+    A[i] = (A[i] << 1) | (A[i-1] >> width_minus_one);
+  }
+  A[1] = A[1] << 1;
+
+  T carry = 0;
+  constexpr T zero = 0;
+
+  #pragma unroll (N)
+  for (auto i = 0; i < N; i++) {
+    T thisLimb = x[i];
+    auto const idx = i * 2;
+    A[idx] = mac_with_carry(A[idx], thisLimb, thisLimb, carry);
+
+    A[idx+1] = adc(A[idx+1], zero, carry);
+  }
+
+  inplace_montgomery_reduction_alt(x, A, m, mprime);
 }
 
 namespace detail {

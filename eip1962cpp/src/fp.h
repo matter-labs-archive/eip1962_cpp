@@ -124,9 +124,8 @@ public:
     void inline mul(Fp<N> const e)
     {
         // repr = cbn::montgomery_mul_alt(repr, e.repr, field.mod(), field.mont_inv());
-        
-        cbn::inplace_montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
-        // repr = cbn::montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
+        // cbn::inplace_montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
+        repr = cbn::montgomery_mul(repr, e.repr, field.mod(), field.mont_inv());
     }
 
     void inline sub(Fp<N> const e)

@@ -16,7 +16,10 @@
 #include <ctbignum/relational_ops.hpp>
 #include <ctbignum/config.hpp>
 #include <ctbignum/slicing.hpp>
+#include <ctbignum/type_traits.hpp>
+#include <ctbignum/arith.h>
 
+#include <limits>
 #include <algorithm>
 #include <cstddef>
 
@@ -92,6 +95,14 @@ constexpr auto add_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
 }
 
 template <typename T, size_t N>
+static inline constexpr void inplace_add_ignore_carry(big_int<N, T> &a, big_int<N, T> const &b) {
+  T carry = 0;
+  for (auto i = 0; i < N; ++i) {
+    a[i] = adc(a[i], b[i], carry);
+  }
+}
+
+template <typename T, size_t N>
 constexpr auto subtract_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
   T carry{};
   big_int<N, T> r{};
@@ -108,7 +119,16 @@ constexpr auto subtract_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
 }
 
 template <typename T, size_t N>
-constexpr auto mod_add(big_int<N, T> a, big_int<N, T> b,
+static inline constexpr void inplace_subtract_ignore_carry(big_int<N, T> & a, big_int<N, T> const &b) {
+  T borrow = 0;
+  
+  for (auto i = 0; i < N; ++i) {
+    a[i] = sbb(a[i], b[i], borrow);
+  }
+}
+
+template <typename T, size_t N>
+static inline constexpr auto mod_add(big_int<N, T> a, big_int<N, T> b,
                        big_int<N, T> modulus) {
   T carry{};
   big_int<N, T> r{};
@@ -126,8 +146,19 @@ constexpr auto mod_add(big_int<N, T> a, big_int<N, T> b,
   return res;
 }
 
+// assumes underfilled limbs
 template <typename T, size_t N>
-constexpr auto mod_sub(big_int<N, T> a, big_int<N, T> b,
+static inline void inplace_mod_add(big_int<N, T> & a, big_int<N, T> const & b,
+                       big_int<N, T> const & modulus) {
+  inplace_add_ignore_carry(a, b);
+
+  if (a >= modulus) {
+    inplace_subtract_ignore_carry(a, modulus);
+  }
+}
+
+template <typename T, size_t N>
+static inline constexpr auto mod_sub(big_int<N, T> a, big_int<N, T> b,
                        big_int<N, T> modulus) {
   T carry{};
   big_int<N, T> r{};
@@ -145,7 +176,15 @@ constexpr auto mod_sub(big_int<N, T> a, big_int<N, T> b,
   return res;
 }
 
+template <typename T, size_t N>
+static inline constexpr void inplace_mod_sub(big_int<N, T> & a, big_int<N, T> const & b,
+                       big_int<N, T> const & modulus) {
+  if (b > a) {
+    inplace_add_ignore_carry(a, modulus);
+  }
 
+  inplace_subtract_ignore_carry(a, b);
+}
 
 template <typename T, size_t N, T... Modulus>
 constexpr auto mod_add(big_int<N, T> a, big_int<N, T> b, std::integer_sequence<T, Modulus...>) {
