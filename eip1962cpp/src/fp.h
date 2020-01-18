@@ -118,7 +118,12 @@ public:
 
     void inline mul2()
     {
-        repr = cbn::mod_add(repr, repr, field.mod());
+        // repr = cbn::alt_mod_add(repr, repr, field.mod());
+        // repr = cbn::mod_add(repr, repr, field.mod());
+        repr = cbn::overflowing_shift_left(repr, 1);
+        if (repr >= field.mod()) {
+            repr = cbn::alt_subtract_ignore_carry(repr, field.mod());
+        }
     }
 
     void inline mul(Fp<N> const e)
@@ -130,19 +135,22 @@ public:
 
     void inline sub(Fp<N> const e)
     {
-        repr = cbn::mod_sub(repr, e.repr, field.mod());
+        repr = cbn::alt_mod_sub(repr, e.repr, field.mod());
+        // repr = cbn::mod_sub(repr, e.repr, field.mod());
     }
 
     void inline add(Fp<N> const e)
     {
-        repr = cbn::mod_add(repr, e.repr, field.mod());
+        repr = cbn::alt_mod_add(repr, e.repr, field.mod());
+        // repr = cbn::mod_add(repr, e.repr, field.mod());
     }
 
     void inline negate()
     {
         if (!is_zero())
         {
-            repr = cbn::subtract_ignore_carry(field.mod(), repr);
+            repr = cbn::alt_subtract_ignore_carry(field.mod(), repr);
+            // repr = cbn::subtract_ignore_carry(field.mod(), repr);
         }
     }
 

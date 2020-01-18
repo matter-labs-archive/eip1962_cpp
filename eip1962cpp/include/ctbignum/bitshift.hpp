@@ -52,5 +52,24 @@ constexpr auto shift_left(big_int<N, T> a, size_t k) {
   res[N] = a[N - 1] >> (std::numeric_limits<T>::digits - k);
   return res;
 }
+
+template <size_t N, typename T>
+constexpr auto overflowing_shift_left(big_int<N, T> a, size_t k) {
+  // shift-left the big integer a by k bits
+  // answer has 1 limb more
+  //
+  
+  if (k == 0) return a;
+
+  big_int<N, T> res{};
+
+  res[0] = (a[0] << k);
+
+  for (auto i = 1; i < N; ++i) {
+    res[i] = (a[i] << k) | (a[i - 1] >> (std::numeric_limits<T>::digits - k));
+  }
+
+  return res;
+}
 }
 #endif

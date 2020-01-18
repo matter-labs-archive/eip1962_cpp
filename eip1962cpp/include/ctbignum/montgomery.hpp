@@ -281,7 +281,7 @@ static inline constexpr T sbb(T a, T b, T &borrow)
 {
   using TT = typename dbl_bitlen<T>::type;
   constexpr TT base = TT(1) << std::numeric_limits<T>::digits;;
-  auto const tmp = base + static_cast<u128>(a) - static_cast<u128>(b) - static_cast<u128>(borrow);
+  auto const tmp = base + static_cast<TT>(a) - static_cast<TT>(b) - static_cast<TT>(borrow);
   if ((tmp >> std::numeric_limits<T>::digits) == 0)
   {
       borrow = 1;

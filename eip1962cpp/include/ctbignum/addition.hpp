@@ -83,6 +83,7 @@ constexpr auto add_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
   T carry{};
   big_int<N, T> r{};
 
+  #pragma unroll (N)
   for (auto i = 0; i < N; ++i) {
     T aa = a[i];
     T sum = aa + b[i];
@@ -95,9 +96,24 @@ constexpr auto add_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
 }
 
 template <typename T, size_t N>
+static inline constexpr auto alt_add_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
+  T carry{};
+  big_int<N, T> r{};
+
+  #pragma unroll (N)
+  for (auto i = 0; i < N; i++) {
+    r[i] = adc(a[i], b[i], carry);
+  }
+
+  return r;
+}
+
+template <typename T, size_t N>
 static inline constexpr void inplace_add_ignore_carry(big_int<N, T> &a, big_int<N, T> const &b) {
   T carry = 0;
-  for (auto i = 0; i < N; ++i) {
+
+  #pragma unroll (N)
+  for (auto i = 0; i < N; i++) {
     a[i] = adc(a[i], b[i], carry);
   }
 }
@@ -107,6 +123,7 @@ constexpr auto subtract_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
   T carry{};
   big_int<N, T> r{};
 
+  #pragma unroll (N)
   for (auto i = 0; i < N; ++i) {
     auto aa = a[i];
     auto diff = aa - b[i];
@@ -119,10 +136,24 @@ constexpr auto subtract_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
 }
 
 template <typename T, size_t N>
+static inline constexpr auto alt_subtract_ignore_carry(big_int<N, T> a, big_int<N, T> b) {
+  T borrow{};
+  big_int<N, T> r{};
+
+  #pragma unroll (N)
+  for (auto i = 0; i < N; i++) {
+    r[i] = sbb(a[i], b[i], borrow);
+  }
+
+  return r;
+}
+
+template <typename T, size_t N>
 static inline constexpr void inplace_subtract_ignore_carry(big_int<N, T> & a, big_int<N, T> const &b) {
   T borrow = 0;
   
-  for (auto i = 0; i < N; ++i) {
+  #pragma unroll (N)
+  for (auto i = 0; i < N; i++) {
     a[i] = sbb(a[i], b[i], borrow);
   }
 }
@@ -144,6 +175,17 @@ static inline constexpr auto mod_add(big_int<N, T> a, big_int<N, T> b,
   auto reduced = subtract_ignore_carry(r, modulus);
   big_int<N, T> res = (carry + (r >= modulus) != 0) ? reduced : r;
   return res;
+}
+
+template <typename T, size_t N>
+static inline constexpr auto alt_mod_add(big_int<N, T> a, big_int<N, T> b,
+                       big_int<N, T> modulus) {
+  a = alt_add_ignore_carry(a, b);
+  if (a >= modulus) {
+    return alt_subtract_ignore_carry(a, modulus);
+  }
+
+  return a;
 }
 
 // assumes underfilled limbs
@@ -174,6 +216,16 @@ static inline constexpr auto mod_sub(big_int<N, T> a, big_int<N, T> b,
   auto adjusted_r = add_ignore_carry(r, modulus);
   big_int<N, T> res = carry ? adjusted_r : r;
   return res;
+}
+
+template <typename T, size_t N>
+static inline constexpr auto alt_mod_sub(big_int<N, T> a, big_int<N, T> b,
+                       big_int<N, T> modulus) {
+  if (b > a) {
+    a = alt_add_ignore_carry(a, modulus);
+  }
+
+  return alt_subtract_ignore_carry(a, b);
 }
 
 template <typename T, size_t N>
