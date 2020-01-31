@@ -440,11 +440,11 @@ private:
         Repr<N> two_in_two_m_minus_k_repr = {1};
         auto shift_amount = 2*mont_power - k;
         while (shift_amount > 64) {
-            two_in_two_m_minus_k_repr = two_in_two_m_minus_k_repr.overflowing_shift_left(64);
+            two_in_two_m_minus_k_repr = cbn::overflowing_shift_left(two_in_two_m_minus_k_repr, 64);
             shift_amount -= 64;
         }
 
-        two_in_two_m_minus_k_repr = two_in_two_m_minus_k_repr.overflowing_shift_left(shift_amount);
+        two_in_two_m_minus_k_repr = cbn::overflowing_shift_left(two_in_two_m_minus_k_repr, shift_amount);
 
         Fp<N> r1 = Fp(r, field);
         Fp<N> r2 = Fp(two_in_two_m_minus_k_repr, field);
