@@ -73,10 +73,10 @@ class FrobeniusPrecomputation
             {
                 unknown_parameter_err("Failed to make Frobenius precomputation, modulus is not 1 mod " + std::to_string(M));
             }
-            power = div_res.quotient;
-            elements[i] = non_residue.pow(power);
+            elements[i] = non_residue.pow(div_res.quotient);
             if (i != EXT - 1) {
-                q_power = cbn::partial_mul<EXT*N>(q_power, q_power);
+                auto const tmp = cbn::partial_mul<EXT*N>(q_power, q_power);
+                cbn::detail::assign(q_power, tmp);
             }
         }
     }

@@ -56,6 +56,7 @@ public:
 
     Fp2(Fp<N> c0, Fp<N> c1, FieldExtension2<N> const &field) : field(field), c0(c0), c1(c1) {}
 
+    
     auto operator=(Fp2<N> const &other)
     {
         c0 = other.c0;
@@ -296,5 +297,11 @@ public:
         return l != e_one;
     }
 };
+
+template <usize N>
+std::ostream &operator<<(std::ostream &strm, Fp2<N> num) {
+    strm << "Fp2("<< num.c0 << " + " << num.c1 << "*u)";
+    return strm;
+}
 
 #endif

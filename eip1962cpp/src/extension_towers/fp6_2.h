@@ -191,4 +191,10 @@ public:
         return res;
     }
 };
+
+template <usize N>
+std::ostream &operator<<(std::ostream &strm, Fp6_2<N> num) {
+    strm << "Fp6("<< num.c0 << " + " << num.c1 << "*v)";
+    return strm;
+}
 #endif

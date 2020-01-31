@@ -362,4 +362,10 @@ public:
     }
 };
 
+template <usize N>
+std::ostream &operator<<(std::ostream &strm, Fp3<N> num) {
+    strm << "Fp3(" << num.c0 << " + " << num.c1 << "*u + " << num.c2 << "*u^2)";
+    return strm;
+}
+
 #endif

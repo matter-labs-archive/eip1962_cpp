@@ -469,4 +469,10 @@ public:
     }
 };
 
+template <usize N>
+std::ostream &operator<<(std::ostream &strm, Fp6_3<N> num) {
+    strm << "Fp6(" << num.c0 << " + " << num.c1 << "*v + " << num.c2 << "*v^2)";
+    return strm;
+}
+
 #endif

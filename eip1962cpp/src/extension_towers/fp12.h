@@ -74,7 +74,7 @@ public:
             f_3.mul(f_1);
 
             // 6
-            auto const f_6 = f_1.pow(Repr<1>{3});
+            auto const f_6 = f_2.pow(Repr<1>{3});
 
             auto const f_4 = Fp2<N>::zero(field);
             auto const f_5 = Fp2<N>::zero(field);
@@ -410,5 +410,11 @@ public:
         return !(*this == other);
     }
 };
+
+template <usize N>
+std::ostream &operator<<(std::ostream &strm, Fp12<N> num) {
+    strm << "Fp12(" << num.c0 << " + " << num.c1 << "*w)";
+    return strm;
+}
 
 #endif

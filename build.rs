@@ -23,7 +23,7 @@ fn main() {
     {
         cc::Build::new()
             .cpp(true) // Switch to C++ library compilation.
-            .flag("-std=c++1z")
+            .flag("-std=c++17")
             .flag("-DFUZZING")
             .flag("-static-libstdc++")
             .include("eip1962cpp/include")
@@ -34,7 +34,7 @@ fn main() {
             .file("eip1962cpp/src/gas_meter.cpp")
             .warnings(false)
             .static_flag(true)
-            .opt_level_str("3")
+            // .opt_level_str("3")
             .compile("eip1962cpp.a");
     }
 

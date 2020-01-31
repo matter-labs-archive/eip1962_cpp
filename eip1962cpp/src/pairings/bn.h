@@ -152,7 +152,7 @@ protected:
         // https://eprint.iacr.org/2012/232.pdf
 
         // f1 = r.conjugate() = f^(p^6)
-        auto f1 = f;
+        Fp12<N> f1 = f;
         f1.frobenius_map(6);
 
         if (auto of2 = f.inverse())

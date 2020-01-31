@@ -116,7 +116,7 @@ private:
             auto b = byte(err);
             if (i == 0 && check_dense) {
                 if (b == 0) {
-                    input_err("top byte of scalar is zero" + str);
+                    input_err("top byte of scalar is zero" + err);
                 }
             }
             auto j = bytes - 1 - i;

@@ -188,4 +188,10 @@ public:
         return res;
     }
 };
+
+template <usize N>
+std::ostream &operator<<(std::ostream &strm, Fp4<N> num) {
+    strm << "Fp4("<< num.c0 << " + " << num.c1 << "*v)";
+    return strm;
+}
 #endif

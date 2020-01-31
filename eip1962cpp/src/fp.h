@@ -225,6 +225,11 @@ public:
         return l != e_one;
     }
 
+    Repr<N> into_repr() const
+    {
+        return cbn::montgomery_reduction(cbn::detail::pad<N>(repr), field.mod(), field.mont_inv());
+    }
+
 private:
     static Option<Fp<N>> from_repr_try(Repr<N> repr, PrimeField<N> const &field)
     {
@@ -241,11 +246,6 @@ private:
         {
             return {};
         }
-    }
-
-    Repr<N> into_repr() const
-    {
-        return cbn::montgomery_reduction(cbn::detail::pad<N>(repr), field.mod(), field.mont_inv());
     }
 
     Option<Fp<N>> mont_inverse() const
@@ -469,5 +469,11 @@ private:
         }
     }
 };
+
+template <usize N>
+std::ostream &operator<<(std::ostream &strm, Fp<N> num) {
+    strm << "Fp(" << num.into_repr() << ")";
+    return strm;
+}
 
 #endif
