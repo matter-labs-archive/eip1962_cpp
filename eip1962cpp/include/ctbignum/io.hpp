@@ -74,7 +74,8 @@ template <size_t N, typename T>
 std::ostream &operator<<(std::ostream &strm, cbn::big_int<N, T> num) {
 
   // Write a base-10 representation of the big-integer to the stream
-  using Radix = Radix10<T>;
+  // using Radix = Radix10<T>;
+  using Radix = Radix16<T>;
   auto buf = convert_radix<Radix>(num);
 
   // remove leading zeros, except the last zero if obj == 0
