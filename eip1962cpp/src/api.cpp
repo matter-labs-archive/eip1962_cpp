@@ -478,10 +478,6 @@ run(std::vector<std::uint8_t> const &input)
     {
         return e.what();
     }
-    catch (std::bad_optional_access const &e) // TODO: Remove when rework the arithmetics
-    {
-        return e.what();
-    }
 }
 
 // Main API function which receives ABI input and returns the result of operations, or description of occured error.

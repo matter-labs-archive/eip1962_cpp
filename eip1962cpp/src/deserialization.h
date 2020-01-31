@@ -65,6 +65,15 @@ public:
         return num;
     }
 
+    // Deserializes number in Big endian format with bytes.
+    std::vector<u64> dyn_number(u8 bytes, bool check_dense, str &err)
+    {
+        std::vector<u64> num;
+        num.resize((bytes + sizeof(u64) - 1) / sizeof(u64), 0);
+        read(bytes, num, check_dense, err);
+        return num;
+    }
+
     void advance(usize bytes, str &err)
     {
         for (auto i = 0; i < bytes; i++)
@@ -97,6 +106,25 @@ private:
             num[at] |= ((u64)b) << off;
         }
     }
+
+        // Deserializes number in Big endian format with bytes.
+    template <class T>
+    void read(u8 bytes, T &num, bool check_dense, str &err)
+    {
+        for (auto i = 0; i < bytes; i++)
+        {
+            auto b = byte(err);
+            if (i == 0 && check_dense) {
+                if (b == 0) {
+                    input_err("top byte of scalar is zero" + str);
+                }
+            }
+            auto j = bytes - 1 - i;
+            auto at = j / sizeof(u64);
+            auto off = (j - at * sizeof(u64)) * 8;
+            num[at] |= ((u64)b) << off;
+        }
+    }
 };
 
 // True if minus
@@ -119,7 +147,8 @@ template <class E>
 std::vector<u64> inline deserialize_scalar(WeierstrassCurve<E> const &wc, Deserializer &deserializer)
 {
     auto scalar = deserializer.dyn_number(wc.order_len(), "Input is not long enough to get scalar");
-    if (greater_or_equal(scalar, wc.subgroup_order()))
+    // scalar <= group_order (equality is allowed)
+    if (!greater_or_equal(wc.subgroup_order(), scalar))
     {
         input_err("Group order is less or equal scalar");
     }
@@ -134,6 +163,7 @@ std::vector<u64> inline deserialize_scalar_with_bit_limit(usize bit_limit, Deser
     {
         input_err("Scalar is too larget for bit length");
     }
+    // do NOT check for DENSE representation
     auto const num = deserializer.dyn_number(length, "Input is not long enough to get scalar");
     if (num_bits(num) > bit_limit)
     {
@@ -258,7 +288,8 @@ u8 inline deserialize_group_order_length(Deserializer &deserializer) {
 }
 
 std::vector<u64> inline deserialize_group_order(u8 order_len, Deserializer &deserializer) {
-    auto order = deserializer.dyn_number(order_len, "Input is not long enough to get main group order size");
+    // check for DENSE encoding
+    auto order = deserializer.dyn_number(order_len, true, "Input is not long enough to get main group order size");
 
     return order;
 }
