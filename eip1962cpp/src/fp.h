@@ -106,7 +106,8 @@ public:
 
     Option<Fp<N>> inverse() const
     {
-        return mont_inverse();
+        return new_mont_inverse();
+        // return mont_inverse();
     }
 
     void inline square()
@@ -332,6 +333,123 @@ private:
                 r = cbn::div2(r);
             }
         }
+
+        auto const el = Fp::from_repr_try(r, field);
+        if (el)
+        {
+            return el.value();
+        }
+        else
+        {
+            return {};
+        }
+    }
+
+    Option<Fp<N>> new_mont_inverse() const
+    {
+        if (is_zero())
+        {
+            return {};
+        }
+
+        // The Montgomery Modular Inverse - Revisited
+
+        // Phase 1
+        auto const modulus = field.mod();
+        auto u = modulus;
+        auto v = repr;
+        Repr<N> r = {0};
+        Repr<N> s = {1};
+        u64 k = 0;
+
+        auto found = false;
+        for (usize i = 0; i < N * 128; i++)
+        {
+            if (cbn::is_zero(v))
+            {
+                found = true;
+                break;
+            }
+            if (cbn::is_even(u))
+            {
+                u = cbn::div2(u);
+                s = cbn::mul2(s);
+            }
+            else if (cbn::is_even(v))
+            {
+                v = cbn::div2(v);
+                r = cbn::mul2(r);
+            }
+            else if (u > v)
+            {
+                u = cbn::subtract_ignore_carry(u, v);
+                u = cbn::div2(u);
+                r = cbn::add_ignore_carry(r, s);
+                s = cbn::mul2(s);
+            }
+            else if (v >= u)
+            {
+                v = cbn::subtract_ignore_carry(v, u);
+                v = cbn::div2(v);
+                s = cbn::add_ignore_carry(s, r);
+                r = cbn::mul2(r);
+            }
+
+            k += 1;
+        }
+
+        if (!found)
+        {
+            return {};
+        }
+
+        if (r >= modulus)
+        {
+            r = cbn::subtract_ignore_carry(r, modulus);
+        }
+
+        r = cbn::subtract_ignore_carry(modulus, r);
+
+        // phase 2
+
+        auto const mont_power = field.mont_power();
+        auto const modulus_bits_ceil = field.modulus_bits();
+        auto const k_in_range = (modulus_bits_ceil <= k) && (k <= mont_power + modulus_bits_ceil);
+        if (!k_in_range)
+        {
+            return {};
+        }
+
+        if ( (modulus_bits_ceil <= k) && (k <= mont_power) ) {
+            Fp<N> r1 = Fp(r, field);
+            Fp<N> r2 = Fp(field.mont_r2(), field);
+
+            r = r1.mul(r2).repr;
+            k += mont_power;
+        }
+
+        if (k > 2*mont_power) {
+            return {};
+        }
+
+        if (2*mont_power - k > mont_power) {
+            // we are not in range
+            return {};
+        }
+
+        Repr<N> two_in_two_m_minus_k_repr = {1};
+        auto shift_amount = 2*mont_power - k;
+        while (shift_amount > 64) {
+            two_in_two_m_minus_k_repr = two_in_two_m_minus_k_repr.overflowing_shift_left(64);
+            shift_amount -= 64;
+        }
+
+        two_in_two_m_minus_k_repr = two_in_two_m_minus_k_repr.overflowing_shift_left(shift_amount);
+
+        Fp<N> r1 = Fp(r, field);
+        Fp<N> r2 = Fp(two_in_two_m_minus_k_repr, field);
+
+        r = r1.mul(r2).repr;
 
         auto const el = Fp::from_repr_try(r, field);
         if (el)
