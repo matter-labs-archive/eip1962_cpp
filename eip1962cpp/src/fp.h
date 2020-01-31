@@ -424,7 +424,8 @@ private:
             Fp<N> r1 = Fp(r, field);
             Fp<N> r2 = Fp(field.mont_r2(), field);
 
-            r = r1.mul(r2).repr;
+            r1.mul(r2);
+            r = r1.repr;
             k += mont_power;
         }
 
@@ -449,7 +450,8 @@ private:
         Fp<N> r1 = Fp(r, field);
         Fp<N> r2 = Fp(two_in_two_m_minus_k_repr, field);
 
-        r = r1.mul(r2).repr;
+        r1.mul(r2);
+        r = r1.repr;
 
         auto const el = Fp::from_repr_try(r, field);
         if (el)

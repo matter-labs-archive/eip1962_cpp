@@ -13,11 +13,13 @@ class PrimeField
     Repr<N> mont_r_;
     Repr<N> mont_r2_;
     u64 mont_inv_;
+    u64 modulus_bits_;
 
 public:
     PrimeField(Repr<N> modulus) : modulus(modulus), mont_power_(N * LIMB_BITS)
     {
         // Compute -m^-1 mod 2**64 by exponentiating by totient(2**64) - 1
+        modulus_bits_ = cbn::detail::bit_length(modulus);
         u64 inv = 1;
         for (auto i = 0; i < 63; i++)
         {
@@ -52,6 +54,11 @@ public:
     u64 mont_power() const
     {
         return mont_power_;
+    }
+
+    u64 modulus_bits() const
+    {
+        return modulus_bits_;
     }
 
     // Montgomery parametare for multiplication
