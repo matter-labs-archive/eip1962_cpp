@@ -63,20 +63,29 @@ class FrobeniusPrecomputation
         constexpr Repr<EXT*N> one = {1};
         constexpr Repr<EXT*N> rdiv = {u64(M)};
 
-        Repr<EXT*N> q_power = {0};
-        cbn::detail::assign(q_power, modulus);
+        Repr<EXT*N> q_power = cbn::from_shorter<EXT*N>(modulus);
         for (usize i = 0; i < EXT; i++) {
+            // std::cout << "Q_POWER after assingment = " << q_power << std::endl;
             Repr<EXT*N> power = cbn::subtract_ignore_carry(q_power, one);
             auto const div_res = cbn::div(power, rdiv);
             auto const rem = div_res.remainder;
             if (!cbn::is_zero(rem))
             {
+                // std::cout << "Round = " << i << std::endl;
+                // std::cout << "Modulus = " << modulus << std::endl;
+                // std::cout << "Power = " << power << std::endl;
+                // std::cout << "Q = " << div_res.quotient << std::endl;
+                // std::cout << "R = " << rem << std::endl;
+                // std::cout << "Divisor = " << rdiv << std::endl;
                 unknown_parameter_err("Failed to make Frobenius precomputation, modulus is not 1 mod " + std::to_string(M));
             }
             elements[i] = non_residue.pow(div_res.quotient);
             if (i != EXT - 1) {
-                auto const tmp = cbn::partial_mul<EXT*N>(q_power, q_power);
-                cbn::detail::assign(q_power, tmp);
+                Repr<EXT*N> const tmp = cbn::partial_mul<EXT*N>(q_power, q_power);
+                // std::cout << "Q_POWER before reassingment = " << q_power << std::endl;
+                q_power = tmp;
+                // cbn::detail::assign(q_power, tmp);
+                // std::cout << "Q_POWER after reassingment = " << q_power << std::endl;
             }
         }
     }

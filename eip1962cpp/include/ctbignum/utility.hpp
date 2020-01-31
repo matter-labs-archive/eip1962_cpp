@@ -65,18 +65,49 @@ constexpr void assign(big_int<N1, T>& dst, big_int<N2, T> src) {
   static_assert(N1 >= N2,
                 "cannot assign: destination has smaller size than source");
 
-  for (auto i = 0; i < N1; ++i)
-    dst[i] = src[i];
-  for (auto i = N1; i < N2; ++i)
+  for (auto i = 0; i < N2; ++i) {
+        dst[i] = src[i];
+  }
+  for (auto i = N2; i < N1; ++i) {
     dst[i] = 0;
+  }
 }
-
 
 } // end of detail namespace
 
 template <size_t ExplicitLength = 0, typename T, T... Limbs>
 constexpr auto to_big_int(std::integer_sequence<T, Limbs...>) {
   return big_int<ExplicitLength ? ExplicitLength : sizeof...(Limbs),T>{ Limbs... };
+}
+
+template <std::size_t N, typename T>
+constexpr auto from_short(T value) {
+  static_assert(N >= 1,
+                "cannot assign to zero sized bigint");
+
+  big_int<N, T> res{};
+  res[0] = value;
+  for (auto i = 1; i < N; i++) {
+    res[i] = 0;
+  }
+
+  return res;
+}
+
+template <std::size_t N1, std::size_t N2, typename T>
+constexpr auto from_shorter(big_int<N2, T> src) {
+  static_assert(N1 >= N2,
+                "cannot assign: new value has smaller size than source");
+
+  big_int<N1, T> res{};
+  for (auto i = 0; i < N2; ++i) {
+    res[i] = src[i];
+  }
+  for (auto i = N2; i < N1; ++i) {
+    res[i] = 0;
+  }
+
+  return res;
 }
 
 } // end of cbn namespace
