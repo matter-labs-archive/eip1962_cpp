@@ -188,6 +188,7 @@ struct BnModelMarker{};
 struct G1G2CurveData {
     u64 modulus_limbs;
     u64 group_order_limbs;
+    usize group_order_len;
     bool in_extension;
     usize extension_degree;
 };
@@ -253,7 +254,13 @@ G1G2CurveData parse_curve_data(u8 mod_byte_len,  Deserializer &deserializer, boo
     // auto group_order_limbs = num_units_for_group_order(order);
     auto group_order_limbs = num_units_for_group_order_length(order_len);
 
-    struct G1G2CurveData data = {u64(N), group_order_limbs, in_extension, extension_degree};
+    struct G1G2CurveData data = {
+        u64(N), 
+        group_order_limbs,
+        usize(order_len), 
+        in_extension, 
+        extension_degree
+    };
 
     return data;
 }
@@ -314,13 +321,13 @@ MntCurveData<EXT> parse_mnt_data(u8 mod_byte_len,  Deserializer &deserializer) {
     u64 num_g1_subgroup_checks = 0;
     u64 num_g2_subgroup_checks = 0;
 
-    u64 ext_degree = u64(EXT) / 2;
+    usize ext_degree = usize(EXT) / 2;
 
     for (auto i = 0; i < num_pairs; i++) {
         auto const check_g1_subgroup = deserialize_boolean(deserializer);
-        deserializer.advance(mod_byte_len*2, "Input is not long enough to read G1 point");
+        deserializer.advance(usize(mod_byte_len)*2, "Input is not long enough to read G1 point");
         auto const check_g2_subgroup = deserialize_boolean(deserializer);
-        deserializer.advance(mod_byte_len*2*ext_degree, "Input is not long enough to read G2 point");
+        deserializer.advance(usize(mod_byte_len)*2*ext_degree, "Input is not long enough to read G2 point");
 
         if (check_g1_subgroup) {
             num_g1_subgroup_checks += 1;
@@ -365,8 +372,8 @@ Bls12CurveData parse_bls12_data(u8 mod_byte_len,  Deserializer &deserializer) {
     // auto group_order_limbs = num_units_for_group_order(order);
     auto group_order_limbs = num_units_for_group_order_length(order_len);
 
-    deserializer.advance(mod_byte_len, "Input is not long enough to read Fp2 non-residue");
-    deserializer.advance(mod_byte_len*2, "Input is not long enough to read Fp6/Fp12 non-residue");
+    deserializer.advance(usize(mod_byte_len), "Input is not long enough to read Fp2 non-residue");
+    deserializer.advance(usize(mod_byte_len)*2, "Input is not long enough to read Fp6/Fp12 non-residue");
 
     deserialize_pairing_twist_type(deserializer);
 
@@ -395,9 +402,9 @@ Bls12CurveData parse_bls12_data(u8 mod_byte_len,  Deserializer &deserializer) {
 
     for (auto i = 0; i < num_pairs; i++) {
         auto const check_g1_subgroup = deserialize_boolean(deserializer);
-        deserializer.advance(mod_byte_len*2, "Input is not long enough to read G1 point");
+        deserializer.advance(usize(mod_byte_len)*2, "Input is not long enough to read G1 point");
         auto const check_g2_subgroup = deserialize_boolean(deserializer);
-        deserializer.advance(mod_byte_len*2*2, "Input is not long enough to read G2 point");
+        deserializer.advance(usize(mod_byte_len)*2*2, "Input is not long enough to read G2 point");
 
         if (check_g1_subgroup) {
             num_g1_subgroup_checks += 1;
@@ -438,8 +445,8 @@ BnCurveData parse_bn_data(u8 mod_byte_len,  Deserializer &deserializer) {
     // auto group_order_limbs = num_units_for_group_order(order);
     auto group_order_limbs = num_units_for_group_order_length(order_len);
 
-    deserializer.advance(mod_byte_len, "Input is not long enough to read Fp2 non-residue");
-    deserializer.advance(mod_byte_len*2, "Input is not long enough to read Fp6/Fp12 non-residue");
+    deserializer.advance(usize(mod_byte_len), "Input is not long enough to read Fp2 non-residue");
+    deserializer.advance(usize(mod_byte_len)*2, "Input is not long enough to read Fp6/Fp12 non-residue");
 
     deserialize_pairing_twist_type(deserializer);
 
@@ -479,9 +486,9 @@ BnCurveData parse_bn_data(u8 mod_byte_len,  Deserializer &deserializer) {
 
     for (auto i = 0; i < num_pairs; i++) {
         auto const check_g1_subgroup = deserialize_boolean(deserializer);
-        deserializer.advance(mod_byte_len*2, "Input is not long enough to read G1 point");
+        deserializer.advance(usize(mod_byte_len)*2, "Input is not long enough to read G1 point");
         auto const check_g2_subgroup = deserialize_boolean(deserializer);
-        deserializer.advance(mod_byte_len*2*2, "Input is not long enough to read G2 point");
+        deserializer.advance(usize(mod_byte_len)*2*2, "Input is not long enough to read G2 point");
 
         if (check_g1_subgroup) {
             num_g1_subgroup_checks += 1;
@@ -747,16 +754,16 @@ u64 calculate_mnt_metering(MntCurveData<EXT> curve_data, const std::string &mode
 template <usize N>
 u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
     auto const data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
-    // deserializer.advance(data.extension_degree * mod_byte_len * 2, "Input is not long enough to read first point");
-    // deserializer.advance(data.extension_degree * mod_byte_len * 2, "Input is not long enough to read second point");
+    deserializer.advance(data.extension_degree * usize(mod_byte_len) * 2, "Input is not long enough to read first point");
+    deserializer.advance(data.extension_degree * usize(mod_byte_len) * 2, "Input is not long enough to read second point");
 
-    // if (!deserializer.ended()) {
-    //     input_err("Input has garbage at the end");
-    // }
-
-    if (deserializer.ended()) {
-        input_err("Input is not long enough to get addition data");
+    if (!deserializer.ended()) {
+        input_err("Input has garbage at the end");
     }
+
+    // if (deserializer.ended()) {
+    //     input_err("Input is not long enough to get addition data");
+    // }
     
     switch (data.extension_degree) {
         case 1:
@@ -772,17 +779,16 @@ u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool i
 template <usize N>
 u64 perform_multiplication_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
     auto const data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
-    // deserializer.advance(data.extension_degree * mod_byte_len * 2, "Input is not long enough to read point for multiplication");
-    // deserializer.advance(data.group_order_len, "Input is not long enough to read second point");
+    deserializer.advance(data.extension_degree * usize(mod_byte_len) * 2, "Input is not long enough to read point for multiplication");
+    deserializer.advance(data.group_order_len, "Input is not long enough to read scalar for multiplication");
 
-    // if (!deserializer.ended()) {
-    //     input_err("input has garbage at the end in multiplication call");
-    // }
-
-
-    if (deserializer.ended()) {
-        input_err("input is not long enough to get multiplication data");
+    if (!deserializer.ended()) {
+        input_err("input has garbage at the end in multiplication call");
     }
+
+    // if (deserializer.ended()) {
+    //     input_err("input is not long enough to get multiplication data");
+    // }
 
     switch (data.extension_degree) {
         case 1:
@@ -804,9 +810,16 @@ u64 perform_multiexp_metering(u8 mod_byte_len, Deserializer deserializer, bool i
         input_err("Invalid number of pairs for multiexp");
     }
 
-    if (deserializer.ended()) {
-        input_err("Input is not long enough to get multiexp data");
+    deserializer.advance(data.extension_degree * usize(mod_byte_len) * 2 * usize(num_pairs), "Input is not long enough to read points for multiexp");
+    deserializer.advance(data.group_order_len * usize(num_pairs), "Input is not long enough to scalars for multiexp");
+
+    if (!deserializer.ended()) {
+        input_err("input has garbage at the end in multiexp call");
     }
+
+    // if (deserializer.ended()) {
+    //     input_err("Input is not long enough to get multiexp data");
+    // }
 
     switch (data.extension_degree) {
         case 1:
