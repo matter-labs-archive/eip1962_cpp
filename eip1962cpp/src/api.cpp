@@ -169,7 +169,7 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     }
 
     // Decode u and it's sign
-    auto const u = deserialize_scalar_with_bit_limit(max_u_bit_length, deserializer);
+    auto const u = deserialize_loop_scalar_with_bit_limit(max_u_bit_length, deserializer);
     if (is_zero(u)) {
         input_err("Loop parameters can not be zero");
     }
@@ -247,7 +247,7 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
     }
 
     // Deserialize x
-    auto const x = deserialize_scalar_with_bit_limit(MAX_ATE_PAIRING_ATE_LOOP_COUNT, deserializer);
+    auto const x = deserialize_loop_scalar_with_bit_limit(MAX_ATE_PAIRING_ATE_LOOP_COUNT, deserializer);
     if (is_zero(x)) {
         input_err("Loop parameters can not be zero");
     }
@@ -258,11 +258,11 @@ std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &
     auto const x_is_negative = deserialize_sign(deserializer);
 
     // Deserialize exp_w0 & exp_w1
-    auto const exp_w0 = deserialize_scalar_with_bit_limit(MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH, deserializer);
+    auto const exp_w0 = deserialize_loop_scalar_with_bit_limit(MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH, deserializer);
     if (is_zero(exp_w0)) {
         input_err("Loop parameters can not be zero");
     }
-    auto const exp_w1 = deserialize_scalar_with_bit_limit(MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH, deserializer);
+    auto const exp_w1 = deserialize_loop_scalar_with_bit_limit(MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH, deserializer);
     if (is_zero(exp_w1)) {
         input_err("Loop parameters can not be zero");
     }

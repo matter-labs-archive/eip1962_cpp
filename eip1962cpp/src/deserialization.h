@@ -56,14 +56,14 @@ public:
         return num;
     }
 
-    // Deserializes number in Big endian format with bytes.
-    std::vector<u64> dyn_number(u8 bytes, str &err)
-    {
-        std::vector<u64> num;
-        num.resize((bytes + sizeof(u64) - 1) / sizeof(u64), 0);
-        read(bytes, num, err);
-        return num;
-    }
+    // // Deserializes number in Big endian format with bytes.
+    // std::vector<u64> dyn_number(u8 bytes, str &err)
+    // {
+    //     std::vector<u64> num;
+    //     num.resize((bytes + sizeof(u64) - 1) / sizeof(u64), 0);
+    //     read(bytes, num, err);
+    //     return num;
+    // }
 
     // Deserializes number in Big endian format with bytes.
     std::vector<u64> dyn_number(u8 bytes, bool check_dense, str &err)
@@ -146,25 +146,29 @@ bool inline deserialize_sign(Deserializer &deserializer)
 template <class E>
 std::vector<u64> inline deserialize_scalar(WeierstrassCurve<E> const &wc, Deserializer &deserializer)
 {
-    auto scalar = deserializer.dyn_number(wc.order_len(), "Input is not long enough to get scalar");
+    auto scalar = deserializer.dyn_number(wc.order_len(), false, "Input is not long enough to get scalar");
     // scalar <= group_order (equality is allowed)
-    if (!greater_or_equal(wc.subgroup_order(), scalar))
-    {
-        input_err("Group order is less or equal scalar");
-    }
+    // if (!greater_or_equal(wc.subgroup_order(), scalar))
+    // {
+    //     input_err("Group order is less or equal scalar");
+    // }
     return scalar;
 }
 
-std::vector<u64> inline deserialize_scalar_with_bit_limit(usize bit_limit, Deserializer &deserializer)
+std::vector<u64> inline deserialize_loop_scalar_with_bit_limit(usize bit_limit, Deserializer &deserializer)
 {
     auto const length = deserializer.byte("Input is not long enough to get scalar length");
+    if (length == 0)
+    {
+        input_err("Loop parameter scalar length is zero");
+    }
     auto const max_length_for_bits = (bit_limit + 7) / 8;
     if (length > max_length_for_bits)
     {
         input_err("Scalar is too larget for bit length");
     }
-    // do NOT check for DENSE representation
-    auto const num = deserializer.dyn_number(length, "Input is not long enough to get scalar");
+    // do check(!) for DENSE representation
+    auto const num = deserializer.dyn_number(length, true, "Input is not long enough to get scalar");
     if (num_bits(num) > bit_limit)
     {
         input_err("Number of bits for scalar is too large");
@@ -199,6 +203,20 @@ TwistType inline deserialize_pairing_twist_type(Deserializer &deserializer)
         return M;
     default:
         unknown_parameter_err("Unknown twist type supplied");
+    }
+}
+
+bool inline deserialize_boolean(Deserializer &deserializer)
+{
+    auto const boolean_byte = deserializer.byte("Input is not long enough to get twist type");
+    switch (boolean_byte)
+    {
+    case 0:
+        return false;
+    case 1:
+        return true;
+    default:
+        unknown_parameter_err("Invalid boolean encoding supplied");
     }
 }
 
@@ -280,6 +298,9 @@ F inline deserialize_non_residue(u8 mod_byte_len, C const &field, u8 extension_d
 
 u8 inline deserialize_group_order_length(Deserializer &deserializer) {
     auto order_len = deserializer.byte("Input is not long enough to get group size length");
+    if (order_len == 0) {
+        input_err("Group order length is zero");
+    }
     if (order_len > MAX_GROUP_BYTE_LEN) {
         input_err("Group order length is too large");
     }
@@ -289,8 +310,11 @@ u8 inline deserialize_group_order_length(Deserializer &deserializer) {
 
 std::vector<u64> inline deserialize_group_order(u8 order_len, Deserializer &deserializer) {
     // check for DENSE encoding
-    auto order = deserializer.dyn_number(order_len, true, "Input is not long enough to get main group order size");
-
+    auto order = deserializer.dyn_number(order_len, false, "Input is not long enough to get main group order size");
+    auto zero = is_zero(order);
+    if (zero) {
+        input_err("Group order is zero");
+    }
     return order;
 }
 
@@ -312,19 +336,25 @@ WeierstrassCurve<F> inline deserialize_weierstrass_curve(u8 mod_byte_len, C cons
     auto order_len = deserialize_group_order_length(deserializer);
     auto order = deserialize_group_order(order_len, deserializer);
 
-    auto zero = is_zero(order);
-    if (zero)
-    {
-        input_err("Group order is zero");
-    }
-
     return WeierstrassCurve(a, b, order, order_len);
 }
 
-u64 inline num_units_for_group_order(const std::vector<u64> &order)
+// u64 inline num_units_for_group_order(const std::vector<u64> &order)
+// {
+//     auto bits = num_bits(order);
+//     auto limbs = (bits + 63) / 64;
+//     if (limbs < NUM_GROUP_LIMBS_MIN) {
+//         input_err("group order is zero");
+//     } else if (limbs > NUM_GROUP_LIMBS_MAX) {
+//         input_err("group order is too large");
+//     }
+
+//     return u64(limbs);
+// }
+
+u64 inline num_units_for_group_order_length(const u64 order_length)
 {
-    auto bits = num_bits(order);
-    auto limbs = (bits + 63) / 64;
+    auto limbs = (order_length + 7)/8;
     if (limbs < NUM_GROUP_LIMBS_MIN) {
         input_err("group order is zero");
     } else if (limbs > NUM_GROUP_LIMBS_MAX) {
@@ -365,13 +395,26 @@ std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<F>>> inline deserialize_poi
     std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<F>>> points;
     for (auto i = 0; i < num_pairs; i++)
     {
+        auto const subgroup_check_g1 = deserialize_boolean(deserializer);
         auto const g1 = deserialize_curve_point<Fp<N>, PrimeField<N>>(mod_byte_len, field, g1_curve, deserializer);
+        auto const subgroup_check_g2 = deserialize_boolean(deserializer);
         auto const g2 = deserialize_curve_point<F>(mod_byte_len, field, g2_curve, deserializer);
 
-        if (!g1.check_correct_subgroup(g1_curve, field) || !g2.check_correct_subgroup(g2_curve, field))
-        {
-            if (!in_fuzzing()) {
-                input_err("G1 or G2 point is not in the expected subgroup");
+        if (subgroup_check_g1) {
+            if (!g1.check_correct_subgroup(g1_curve, field))
+            {
+                if (!in_fuzzing()) {
+                    input_err("G1 or G2 point is not in the expected subgroup");
+                }
+            }
+        }
+
+        if (subgroup_check_g2) {
+            if (!g2.check_correct_subgroup(g2_curve, field))
+            {
+                if (!in_fuzzing()) {
+                    input_err("G1 or G2 point is not in the expected subgroup");
+                }
             }
         }
 

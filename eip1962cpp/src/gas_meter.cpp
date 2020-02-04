@@ -203,6 +203,8 @@ struct MntCurveData {
     u64 w1_bits;
     u64 w1_hamming;
     u64 num_pairs;
+    u64 num_g1_subgroup_checks;
+    u64 num_g2_subgroup_checks;
 };
 
 struct Bls12CurveData {
@@ -211,6 +213,8 @@ struct Bls12CurveData {
     u64 x_bits;
     u64 x_hamming;
     u64 num_pairs;
+    u64 num_g1_subgroup_checks;
+    u64 num_g2_subgroup_checks;
 };
 
 struct BnCurveData {
@@ -221,6 +225,8 @@ struct BnCurveData {
     u64 six_u_plus_two_bits;
     u64 six_u_plus_two_hamming;
     u64 num_pairs;
+    u64 num_g1_subgroup_checks;
+    u64 num_g2_subgroup_checks;
 };
 
 template <usize N>
@@ -244,12 +250,8 @@ G1G2CurveData parse_curve_data(u8 mod_byte_len,  Deserializer &deserializer, boo
     auto order_len = deserialize_group_order_length(deserializer);
     auto order = deserialize_group_order(order_len, deserializer);
 
-    auto zero = is_zero(order);
-    if (zero) {
-        input_err("Group order is zero");
-    }
-
-    auto group_order_limbs = num_units_for_group_order(order);
+    // auto group_order_limbs = num_units_for_group_order(order);
+    auto group_order_limbs = num_units_for_group_order_length(order_len);
 
     struct G1G2CurveData data = {u64(N), group_order_limbs, in_extension, extension_degree};
 
@@ -266,16 +268,12 @@ MntCurveData<EXT> parse_mnt_data(u8 mod_byte_len,  Deserializer &deserializer) {
     auto order_len = deserialize_group_order_length(deserializer);
     auto order = deserialize_group_order(order_len, deserializer);
 
-    auto zero = is_zero(order);
-    if (zero) {
-        input_err("Group order is zero");
-    }
-
-    auto group_order_limbs = num_units_for_group_order(order);
+    // auto group_order_limbs = num_units_for_group_order(order);
+    auto group_order_limbs = num_units_for_group_order_length(order_len);
 
     deserializer.advance(mod_byte_len, "Input is not long enough to read non-residue");
 
-    auto ate_loop = deserialize_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_ATE_LOOP_COUNT_HAMMING), deserializer);
+    auto ate_loop = deserialize_loop_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_ATE_LOOP_COUNT_HAMMING), deserializer);
     auto ate_bits = num_bits(ate_loop);
     auto ate_hamming = calculate_hamming_weight(ate_loop);
 
@@ -289,7 +287,7 @@ MntCurveData<EXT> parse_mnt_data(u8 mod_byte_len,  Deserializer &deserializer) {
 
     deserialize_sign(deserializer);
 
-    auto w0 = deserialize_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH), deserializer);
+    auto w0 = deserialize_loop_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_FINAL_EXP_W0_BIT_LENGTH), deserializer);
     auto w0_bits = num_bits(w0);
     auto w0_hamming = calculate_hamming_weight(w0);
 
@@ -297,7 +295,7 @@ MntCurveData<EXT> parse_mnt_data(u8 mod_byte_len,  Deserializer &deserializer) {
         input_err("W0 is zero");
     }
 
-    auto w1 = deserialize_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH), deserializer);
+    auto w1 = deserialize_loop_scalar_with_bit_limit(usize(MAX_ATE_PAIRING_FINAL_EXP_W1_BIT_LENGTH), deserializer);
     auto w1_bits = num_bits(w1);
     auto w1_hamming = calculate_hamming_weight(w1);
 
@@ -313,11 +311,43 @@ MntCurveData<EXT> parse_mnt_data(u8 mod_byte_len,  Deserializer &deserializer) {
         input_err("Zero pairs encoded");
     }
 
-    if (deserializer.ended()) {
-        input_err("Input is not long enough");
+    u64 num_g1_subgroup_checks = 0;
+    u64 num_g2_subgroup_checks = 0;
+
+    u64 ext_degree = u64(EXT) / 2;
+
+    for (auto i = 0; i < num_pairs; i++) {
+        auto const check_g1_subgroup = deserialize_boolean(deserializer);
+        deserializer.advance(mod_byte_len*2, "Input is not long enough to read G1 point");
+        auto const check_g2_subgroup = deserialize_boolean(deserializer);
+        deserializer.advance(mod_byte_len*2*ext_degree, "Input is not long enough to read G2 point");
+
+        if (check_g1_subgroup) {
+            num_g1_subgroup_checks += 1;
+        }
+
+        if (check_g2_subgroup) {
+            num_g2_subgroup_checks += 1;
+        }
     }
 
-    struct MntCurveData<EXT> data = {u64(N), group_order_limbs, ate_bits, ate_hamming, w0_bits, w0_hamming, w1_bits, w1_hamming, num_pairs};
+    if (!deserializer.ended()) {
+        input_err("Input has garbage at the end");
+    }
+
+    struct MntCurveData<EXT> data = {
+        u64(N), 
+        group_order_limbs, 
+        ate_bits, 
+        ate_hamming, 
+        w0_bits, 
+        w0_hamming, 
+        w1_bits, 
+        w1_hamming, 
+        num_pairs,
+        num_g1_subgroup_checks,
+        num_g2_subgroup_checks
+    };
 
     return data;
 }
@@ -332,19 +362,15 @@ Bls12CurveData parse_bls12_data(u8 mod_byte_len,  Deserializer &deserializer) {
     auto order_len = deserialize_group_order_length(deserializer);
     auto order = deserialize_group_order(order_len, deserializer);
 
-    auto zero = is_zero(order);
-    if (zero) {
-        input_err("Group order is zero");
-    }
-
-    auto group_order_limbs = num_units_for_group_order(order);
+    // auto group_order_limbs = num_units_for_group_order(order);
+    auto group_order_limbs = num_units_for_group_order_length(order_len);
 
     deserializer.advance(mod_byte_len, "Input is not long enough to read Fp2 non-residue");
     deserializer.advance(mod_byte_len*2, "Input is not long enough to read Fp6/Fp12 non-residue");
 
     deserialize_pairing_twist_type(deserializer);
 
-    auto x = deserialize_scalar_with_bit_limit(usize(MAX_BLS12_X_BIT_LENGTH), deserializer);
+    auto x = deserialize_loop_scalar_with_bit_limit(usize(MAX_BLS12_X_BIT_LENGTH), deserializer);
     auto x_bits = num_bits(x);
     auto x_hamming = calculate_hamming_weight(x);
 
@@ -364,12 +390,37 @@ Bls12CurveData parse_bls12_data(u8 mod_byte_len,  Deserializer &deserializer) {
         input_err("Zero pairs encoded");
     }
 
-    if (deserializer.ended()) {
-        input_err("Input is not long enough");
+    u64 num_g1_subgroup_checks = 0;
+    u64 num_g2_subgroup_checks = 0;
+
+    for (auto i = 0; i < num_pairs; i++) {
+        auto const check_g1_subgroup = deserialize_boolean(deserializer);
+        deserializer.advance(mod_byte_len*2, "Input is not long enough to read G1 point");
+        auto const check_g2_subgroup = deserialize_boolean(deserializer);
+        deserializer.advance(mod_byte_len*2*2, "Input is not long enough to read G2 point");
+
+        if (check_g1_subgroup) {
+            num_g1_subgroup_checks += 1;
+        }
+
+        if (check_g2_subgroup) {
+            num_g2_subgroup_checks += 1;
+        }
     }
 
+    if (!deserializer.ended()) {
+        input_err("Input has garbaget at the end");
+    }
 
-    struct Bls12CurveData data = {u64(N), group_order_limbs, x_bits, x_hamming, num_pairs};
+    struct Bls12CurveData data = {
+        u64(N), 
+        group_order_limbs, 
+        x_bits, 
+        x_hamming, 
+        num_pairs,
+        num_g1_subgroup_checks,
+        num_g2_subgroup_checks
+    };
 
     return data;
 }
@@ -384,19 +435,15 @@ BnCurveData parse_bn_data(u8 mod_byte_len,  Deserializer &deserializer) {
     auto order_len = deserialize_group_order_length(deserializer);
     auto order = deserialize_group_order(order_len, deserializer);
 
-    auto zero = is_zero(order);
-    if (zero) {
-        input_err("Group order is zero");
-    }
-
-    auto group_order_limbs = num_units_for_group_order(order);
+    // auto group_order_limbs = num_units_for_group_order(order);
+    auto group_order_limbs = num_units_for_group_order_length(order_len);
 
     deserializer.advance(mod_byte_len, "Input is not long enough to read Fp2 non-residue");
     deserializer.advance(mod_byte_len*2, "Input is not long enough to read Fp6/Fp12 non-residue");
 
     deserialize_pairing_twist_type(deserializer);
 
-    auto u = deserialize_scalar_with_bit_limit(usize(MAX_BN_U_BIT_LENGTH), deserializer);
+    auto u = deserialize_loop_scalar_with_bit_limit(usize(MAX_BN_U_BIT_LENGTH), deserializer);
     auto u_bits = num_bits(u);
     auto u_hamming = calculate_hamming_weight(u);
 
@@ -427,11 +474,39 @@ BnCurveData parse_bn_data(u8 mod_byte_len,  Deserializer &deserializer) {
         input_err("Zero pairs encoded");
     }
 
-    if (deserializer.ended()) {
-        input_err("Input is not long enough");
+    u64 num_g1_subgroup_checks = 0;
+    u64 num_g2_subgroup_checks = 0;
+
+    for (auto i = 0; i < num_pairs; i++) {
+        auto const check_g1_subgroup = deserialize_boolean(deserializer);
+        deserializer.advance(mod_byte_len*2, "Input is not long enough to read G1 point");
+        auto const check_g2_subgroup = deserialize_boolean(deserializer);
+        deserializer.advance(mod_byte_len*2*2, "Input is not long enough to read G2 point");
+
+        if (check_g1_subgroup) {
+            num_g1_subgroup_checks += 1;
+        }
+
+        if (check_g2_subgroup) {
+            num_g2_subgroup_checks += 1;
+        }
     }
 
-    struct BnCurveData data = {u64(N), group_order_limbs, u_bits, u_hamming, six_u_plus_two_bits, six_u_plus_two_hamming, num_pairs};
+    if (!deserializer.ended()) {
+        input_err("Input has garbaget at the end");
+    }
+
+    struct BnCurveData data = {
+        u64(N), 
+        group_order_limbs, 
+        u_bits, 
+        u_hamming, 
+        six_u_plus_two_bits, 
+        six_u_plus_two_hamming, 
+        num_pairs,
+        num_g1_subgroup_checks,
+        num_g2_subgroup_checks
+    };
 
     return data;
 }
@@ -468,6 +543,14 @@ u64 checked_add(u64 a, u64 b) {
     }
 
     return a + b;
+}
+
+u64 checked_sub(u64 a, u64 b) {
+    if (a < b) {
+        input_err("underflow");
+    }
+
+    return a - b;
 }
 
 std::vector<u64> make_powers(u64 value, u64 max_power) {
@@ -521,7 +604,7 @@ u64 eval_model(
 }
 
 template<typename MARKER>
-u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs, const std::string &model) {
+u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs, bool include_base, const std::string &model) {
     // std::unordered_map<u64,u64>::const_iterator
     MultiplicationParametersModel<MARKER> &instance = MultiplicationParametersModel<MARKER>::getInstance(model);
     auto base_price = instance.base_prices.find(modulus_limbs);
@@ -534,13 +617,15 @@ u64 calculate_multiplication_metering(u64 modulus_limbs, u64 group_order_limbs, 
     }    
 
     u64 result = checked_mul(group_order_limbs, per_limb_price->second);
-    result = checked_add(result, base_price->second);
+    if (include_base) {
+        result = checked_add(result, base_price->second);
+    }
     return result;
 }
 
 template<typename MARKER>
 u64 calculate_multiexp_metering(u64 modulus_limbs, u64 group_order_limbs, u64 num_pairs, const std::string &mul_model) {
-    u64 result = calculate_multiplication_metering<MARKER>(modulus_limbs, group_order_limbs, mul_model);
+    u64 result = calculate_multiplication_metering<MARKER>(modulus_limbs, group_order_limbs, true, mul_model);
     result = checked_mul(result, num_pairs);
 
     MultiexpParametersModel<MultiexpModelMarker> &instance = MultiexpParametersModel<MultiexpModelMarker>::getInstance(models_multiexp_discounts_string);
@@ -567,8 +652,8 @@ u64 calculate_multiexp_metering(u64 modulus_limbs, u64 group_order_limbs, u64 nu
     return result;
 }
 
-template<typename MARKER, usize EXT, usize MAX>
-u64 calculate_mnt_metering(MntCurveData<EXT> curve_data, const std::string &model) {
+template<typename MARKER, typename MARKER_G2_MUL, usize EXT, usize MAX>
+u64 calculate_mnt_metering(MntCurveData<EXT> curve_data, const std::string &model, const std::string &g2_mul_model) {
     u64 final_result = 0;
 
     MntParametersModel<MARKER, MAX> &instance = MntParametersModel<MARKER, MAX>::getInstance(model);
@@ -638,14 +723,39 @@ u64 calculate_mnt_metering(MntCurveData<EXT> curve_data, const std::string &mode
 
     final_result = final_result / multiplier;
 
+    u64 num_g1_sugroup_discounts = curve_data.num_pairs - curve_data.num_g1_subgroup_checks;
+    u64 num_g2_sugroup_discounts = curve_data.num_pairs - curve_data.num_g2_subgroup_checks;
+
+    u64 g1_per_point_discount = calculate_multiplication_metering<G1MultiplicationModelMarker>(
+        curve_data.modulus_limbs, curve_data.group_order_limbs, false, models_g1_multiplication_string
+    );
+
+    u64 g1_discount = checked_mul(num_g1_sugroup_discounts, g1_per_point_discount);
+
+    u64 g2_per_point_discount = calculate_multiplication_metering<MARKER_G2_MUL>(
+        curve_data.modulus_limbs, curve_data.group_order_limbs, false, g2_mul_model
+    );
+
+    u64 g2_discount = checked_mul(num_g2_sugroup_discounts, g2_per_point_discount);
+
+    final_result = checked_sub(final_result, g1_discount);
+    final_result = checked_sub(final_result, g2_discount);
+
     return final_result;
 }
 
 template <usize N>
 u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
     auto const data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
+    // deserializer.advance(data.extension_degree * mod_byte_len * 2, "Input is not long enough to read first point");
+    // deserializer.advance(data.extension_degree * mod_byte_len * 2, "Input is not long enough to read second point");
+
+    // if (!deserializer.ended()) {
+    //     input_err("Input has garbage at the end");
+    // }
+
     if (deserializer.ended()) {
-        input_err("input is not long enough");
+        input_err("Input is not long enough to get addition data");
     }
     
     switch (data.extension_degree) {
@@ -662,17 +772,25 @@ u64 perform_addition_metering(u8 mod_byte_len, Deserializer deserializer, bool i
 template <usize N>
 u64 perform_multiplication_metering(u8 mod_byte_len, Deserializer deserializer, bool in_extension) {
     auto const data = parse_curve_data<N>(mod_byte_len, deserializer, in_extension);
+    // deserializer.advance(data.extension_degree * mod_byte_len * 2, "Input is not long enough to read point for multiplication");
+    // deserializer.advance(data.group_order_len, "Input is not long enough to read second point");
+
+    // if (!deserializer.ended()) {
+    //     input_err("input has garbage at the end in multiplication call");
+    // }
+
+
     if (deserializer.ended()) {
-        input_err("input is not long enough");
+        input_err("input is not long enough to get multiplication data");
     }
 
     switch (data.extension_degree) {
         case 1:
-            return calculate_multiplication_metering<G1MultiplicationModelMarker>(data.modulus_limbs, data.group_order_limbs, models_g1_multiplication_string);
+            return calculate_multiplication_metering<G1MultiplicationModelMarker>(data.modulus_limbs, data.group_order_limbs, true, models_g1_multiplication_string);
         case 2:
-            return calculate_multiplication_metering<G2MultiplicationModelExt2Marker>(data.modulus_limbs, data.group_order_limbs, models_g2_multiplication_ext2_string);
+            return calculate_multiplication_metering<G2MultiplicationModelExt2Marker>(data.modulus_limbs, data.group_order_limbs, true, models_g2_multiplication_ext2_string);
         case 3:
-            return calculate_multiplication_metering<G2MultiplicationModelExt3Marker>(data.modulus_limbs, data.group_order_limbs, models_g2_multiplication_ext3_string);
+            return calculate_multiplication_metering<G2MultiplicationModelExt3Marker>(data.modulus_limbs, data.group_order_limbs, true, models_g2_multiplication_ext3_string);
     }
     input_err("unknown extension degree");
 }
@@ -683,11 +801,11 @@ u64 perform_multiexp_metering(u8 mod_byte_len, Deserializer deserializer, bool i
     auto const num_pairs = deserializer.byte("Input is not long enough to get number of pairs");
     if (num_pairs == 0)
     {
-        input_err("Invalid number of pairs");
+        input_err("Invalid number of pairs for multiexp");
     }
 
     if (deserializer.ended()) {
-        input_err("input is not long enough");
+        input_err("Input is not long enough to get multiexp data");
     }
 
     switch (data.extension_degree) {
@@ -704,15 +822,12 @@ u64 perform_multiexp_metering(u8 mod_byte_len, Deserializer deserializer, bool i
 template <usize N, usize EXT>
 u64 perform_mnt_metering(u8 mod_byte_len, Deserializer deserializer) {
     auto const data = parse_mnt_data<N, EXT>(mod_byte_len, deserializer);
-    if (deserializer.ended()) {
-        input_err("input is not long enough");
-    }
 
     switch (EXT) {
         case 4:
-            return calculate_mnt_metering<Mnt4ModelMarker, EXT, MNT4_MAX_MODULUS_POWER>(data, models_mnt4_model_json_string);
+            return calculate_mnt_metering<Mnt4ModelMarker, G2MultiplicationModelExt2Marker, EXT, MNT4_MAX_MODULUS_POWER>(data, models_mnt4_model_json_string, models_g2_multiplication_ext2_string);
         case 6:
-            return calculate_mnt_metering<Mnt6ModelMarker, EXT, MNT6_MAX_MODULUS_POWER>(data, models_mnt6_model_json_string);
+            return calculate_mnt_metering<Mnt6ModelMarker, G2MultiplicationModelExt3Marker, EXT, MNT6_MAX_MODULUS_POWER>(data, models_mnt6_model_json_string, models_g2_multiplication_ext3_string);
         default:
             input_err("unknown MNT curve type");
     }
@@ -721,9 +836,6 @@ u64 perform_mnt_metering(u8 mod_byte_len, Deserializer deserializer) {
 template <usize N>
 u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
     auto const data = parse_bls12_data<N>(mod_byte_len, deserializer);
-    if (deserializer.ended()) {
-        input_err("input is not long enough");
-    }
 
     BlsBnParametersModel<Bls12ModelMarker> &instance = BlsBnParametersModel<Bls12ModelMarker>::getInstance(models_bls12_model_json_string);
 
@@ -772,15 +884,30 @@ u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
 
     final_result = final_result / multiplier;
 
+    u64 num_g1_sugroup_discounts = data.num_pairs - data.num_g1_subgroup_checks;
+    u64 num_g2_sugroup_discounts = data.num_pairs - data.num_g2_subgroup_checks;
+
+    u64 g1_per_point_discount = calculate_multiplication_metering<G1MultiplicationModelMarker>(
+        data.modulus_limbs, data.group_order_limbs, false, models_g1_multiplication_string
+    );
+
+    u64 g1_discount = checked_mul(num_g1_sugroup_discounts, g1_per_point_discount);
+
+    u64 g2_per_point_discount = calculate_multiplication_metering<G2MultiplicationModelExt2Marker>(
+        data.modulus_limbs, data.group_order_limbs, false, models_g2_multiplication_ext2_string
+    );
+
+    u64 g2_discount = checked_mul(num_g2_sugroup_discounts, g2_per_point_discount);
+
+    final_result = checked_sub(final_result, g1_discount);
+    final_result = checked_sub(final_result, g2_discount);
+
     return final_result;
 }
 
 template <usize N>
 u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
     auto const data = parse_bn_data<N>(mod_byte_len, deserializer);
-    if (deserializer.ended()) {
-        input_err("input is not long enough");
-    }
 
     BlsBnParametersModel<BnModelMarker> &instance = BlsBnParametersModel<BnModelMarker>::getInstance(models_bn_model_json_string);
     
@@ -834,6 +961,24 @@ u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
     final_result = checked_add(final_result, final_exp_cost);
 
     final_result = final_result / multiplier;
+
+    u64 num_g1_sugroup_discounts = data.num_pairs - data.num_g1_subgroup_checks;
+    u64 num_g2_sugroup_discounts = data.num_pairs - data.num_g2_subgroup_checks;
+
+    u64 g1_per_point_discount = calculate_multiplication_metering<G1MultiplicationModelMarker>(
+        data.modulus_limbs, data.group_order_limbs, false, models_g1_multiplication_string
+    );
+
+    u64 g1_discount = checked_mul(num_g1_sugroup_discounts, g1_per_point_discount);
+
+    u64 g2_per_point_discount = calculate_multiplication_metering<G2MultiplicationModelExt2Marker>(
+        data.modulus_limbs, data.group_order_limbs, false, models_g2_multiplication_ext2_string
+    );
+
+    u64 g2_discount = checked_mul(num_g2_sugroup_discounts, g2_per_point_discount);
+
+    final_result = checked_sub(final_result, g1_discount);
+    final_result = checked_sub(final_result, g2_discount);
 
     return final_result;
 }
