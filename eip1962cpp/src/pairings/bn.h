@@ -54,7 +54,7 @@ protected:
             auto const q = std::get<1>(*it);
             if (!p.is_zero() && !q.is_zero())
             {
-                auto coeffs = prepare(q, context, two_inv_);
+                auto coeffs = prepare(q, context, two_inv);
                 prepared_coeffs.push_back(coeffs);
                 g1_references.push_back(p);
             }
