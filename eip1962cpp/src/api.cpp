@@ -128,7 +128,7 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     auto const e6_non_residue = deserialize_non_residue<Fp2<N>>(mod_byte_len, extension2, 6, deserializer);
     auto const twist_type = deserialize_pairing_twist_type(deserializer);
 
-    FrobeniusPrecomputation<FieldExtension2<N>, Fp2<N>, N, 6, 2> const precomputation(extension2, e6_non_residue, field.mod());
+    FrobeniusPrecomputation_2<FieldExtension2<N>, Fp2<N>, N, 6> const precomputation(extension2, e6_non_residue, field.mod());
 
     auto const extension6 = FieldExtension3over2(e6_non_residue, extension2, precomputation, true);
     auto const extension12 = FieldExtension2over3over2(extension6, precomputation, true);
@@ -213,15 +213,19 @@ std::vector<std::uint8_t> run_pairing_b(u8 mod_byte_len, PrimeField<N> const &fi
     return result;
 }
 
-template <class F, class F2, class FEO, class FE, class ENGINE, usize N>
+template <class F, class F2, class FEO, class FE, class ENGINE, usize N, usize FINAL_EXT>
 std::vector<std::uint8_t> run_pairing_mnt(u8 mod_byte_len, PrimeField<N> const &field, u8 extension_degree, Deserializer deserializer)
 {
     // Deser Weierstrass 1 & Extension
     auto const g1_curve = deserialize_weierstrass_curve<Fp<N>>(mod_byte_len, field, deserializer, false);
-    auto const extension = FE(deserialize_non_residue<Fp<N>>(mod_byte_len, field, extension_degree * 2, deserializer), field, true);
+    auto const non_residue = deserialize_non_residue<Fp<N>>(mod_byte_len, field, FINAL_EXT, deserializer);
+
+    FrobeniusPrecomputation<PrimeField<N>, Fp<N>, N, FINAL_EXT> const precomputation(field, non_residue, field.mod());
+
+    auto const extension = FE(non_residue, field, precomputation, true);
 
     // Construct Extension 2
-    auto const extension_2 = FEO(extension, true);
+    auto const extension_2 = FEO(extension, precomputation, true);
 
     // Construct Weistrass 2
     auto const one = Fp<N>::one(field);
@@ -322,9 +326,9 @@ std::vector<std::uint8_t> run_operation(u8 operation, std::optional<u8> curve_ty
         switch (curve_type_value)
         {
         case MNT4:
-            return run_pairing_mnt<Fp2<N>, Fp4<N>, FieldExtension2over2<N>, FieldExtension2<N>, MNT4engine<N>>(mod_byte_len, field, 2, deserializer);
+            return run_pairing_mnt<Fp2<N>, Fp4<N>, FieldExtension2over2<N>, FieldExtension2<N>, MNT4engine<N>, N, 4>(mod_byte_len, field, 2, deserializer);
         case MNT6:
-            return run_pairing_mnt<Fp3<N>, Fp6_2<N>, FieldExtension2over3<N>, FieldExtension3<N>, MNT6engine<N>>(mod_byte_len, field, 3, deserializer);
+            return run_pairing_mnt<Fp3<N>, Fp6_2<N>, FieldExtension2over3<N>, FieldExtension3<N>, MNT6engine<N>, N, 6>(mod_byte_len, field, 3, deserializer);
         case BLS12:
             return run_pairing_b<BLS12engine<N>>(mod_byte_len, field, MAX_BLS12_X_BIT_LENGTH, deserializer);
         case BN:

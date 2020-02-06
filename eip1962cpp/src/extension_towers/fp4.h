@@ -38,6 +38,27 @@ public:
         }
     }
 
+    FieldExtension2over2(FieldExtension2<N> const &field, FrobeniusPrecomputation<PrimeField<N>, Fp<N>, N, 4> const &frobenius_precomputation, bool needs_frobenius) : FieldExtension2<N>(field), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field), Fp<N>::zero(field)})
+    {
+        if (needs_frobenius) {
+            // NON_REDISUE**(((q^0) - 1) / 4)
+            auto const f_0 = Fp<N>::one(field);
+
+            // NON_REDISUE**(((q^1) - 1) / 4)
+            auto const f_1 = frobenius_precomputation.elements[0];
+
+            // NON_REDISUE**(((q^2) - 1) / 4)
+            auto const f_2 = f_1.pow(Repr<1>{2});
+
+            auto const f_3 = Fp<N>::zero(field);
+
+            std::array<Fp<N>, 4> calc_frobenius_coeffs_c1 = {f_0, f_1, f_2, f_3};
+            frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+
+            frobenius_calculated = true;
+        }
+    }
+
     void mul_by_nonresidue(Fp2<N> &el) const
     {
         // IMPORTANT: This only works cause the structure of extension field for Fp6_2

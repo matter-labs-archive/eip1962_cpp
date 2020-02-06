@@ -52,40 +52,53 @@ std::vector<F> calculate_window_table(F base, usize window)
     return table;
 }
 
-template <class C, typename F, usize N, usize M, usize EXT>
+template <class C, typename F, usize N, usize M>
 class FrobeniusPrecomputation
 {
     public:
-    std::array<F, EXT> elements;
+    std::array<F, 1> elements;
 
-    FrobeniusPrecomputation(C const &field, F const &non_residue, Repr<N> const &modulus): elements( {F::zero(field), F::zero(field)} )
+    FrobeniusPrecomputation(C const &field, F const &non_residue, Repr<N> const &modulus): elements( {F::zero(field)} )
     {
-        constexpr Repr<EXT*N> one = {1};
-        constexpr Repr<EXT*N> rdiv = {u64(M)};
+        constexpr Repr<N> one = {1};
+        constexpr Repr<N> rdiv = {u64(M)};
 
-        Repr<EXT*N> q_power = cbn::from_shorter<EXT*N>(modulus);
-        for (usize i = 0; i < EXT; i++) {
-            // std::cout << "Q_POWER after assingment = " << q_power << std::endl;
-            Repr<EXT*N> power = cbn::subtract_ignore_carry(q_power, one);
+        Repr<N> q_power = cbn::from_shorter<N>(modulus);
+        Repr<N> power = cbn::subtract_ignore_carry(q_power, one);
+        auto const div_res = cbn::div(power, rdiv);
+        auto const rem = div_res.remainder;
+        if (!cbn::is_zero(rem))
+        {
+            unknown_parameter_err("Failed to make Frobenius precomputation over Fp, modulus is not 1 mod " + std::to_string(M));
+        }
+        elements[0] = non_residue.pow(div_res.quotient);
+    }
+};
+
+template <class C, typename F, usize N, usize M>
+class FrobeniusPrecomputation_2
+{
+    public:
+    std::array<F, 2> elements;
+
+    FrobeniusPrecomputation_2(C const &field, F const &non_residue, Repr<N> const &modulus): elements( {F::zero(field), F::zero(field)} )
+    {
+        constexpr Repr<2*N> one = {1};
+        constexpr Repr<2*N> rdiv = {u64(M)};
+
+        Repr<2*N> q_power = cbn::from_shorter<2*N>(modulus);
+        for (usize i = 0; i < 2; i++) {
+            Repr<2*N> power = cbn::subtract_ignore_carry(q_power, one);
             auto const div_res = cbn::div(power, rdiv);
             auto const rem = div_res.remainder;
             if (!cbn::is_zero(rem))
             {
-                // std::cout << "Round = " << i << std::endl;
-                // std::cout << "Modulus = " << modulus << std::endl;
-                // std::cout << "Power = " << power << std::endl;
-                // std::cout << "Q = " << div_res.quotient << std::endl;
-                // std::cout << "R = " << rem << std::endl;
-                // std::cout << "Divisor = " << rdiv << std::endl;
-                unknown_parameter_err("Failed to make Frobenius precomputation, modulus is not 1 mod " + std::to_string(M));
+                unknown_parameter_err("Failed to make Frobenius precomputation over Fp2, modulus is not 1 mod " + std::to_string(M));
             }
             elements[i] = non_residue.pow(div_res.quotient);
-            if (i != EXT - 1) {
-                Repr<EXT*N> const tmp = cbn::partial_mul<EXT*N>(q_power, q_power);
-                // std::cout << "Q_POWER before reassingment = " << q_power << std::endl;
+            if (i != 1) {
+                Repr<2*N> const tmp = cbn::partial_mul<2*N>(q_power, q_power);
                 q_power = tmp;
-                // cbn::detail::assign(q_power, tmp);
-                // std::cout << "Q_POWER after reassingment = " << q_power << std::endl;
             }
         }
     }

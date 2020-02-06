@@ -36,6 +36,25 @@ public:
         }
     }
 
+    FieldExtension2(Fp<N> non_residue, PrimeField<N> const &field, FrobeniusPrecomputation<PrimeField<N>, Fp<N>, N, 4> const &frobenius_precomputation, bool needs_frobenius) : PrimeField<N>(field), _non_residue(non_residue), frobenius_coeffs_c1({Fp<N>::zero(field), Fp<N>::zero(field)})
+    {
+        if (needs_frobenius) {
+            // calculate_frobenius_coeffs
+
+            // NONRESIDUE**(((q^0) - 1) / 2)
+            auto const f_0 = Fp<N>::one(field);
+
+            // NONRESIDUE**(((q^1) - 1) / 2)
+            auto f_1 = frobenius_precomputation.elements[0];
+            f_1.square();
+
+            std::array<Fp<N>, 2> calc_frobenius_coeffs_c1 = {f_0, f_1};
+            frobenius_coeffs_c1 = calc_frobenius_coeffs_c1;
+
+            frobenius_calculated = true;
+        }
+    }
+
     void mul_by_nonresidue(Fp<N> &num) const
     {
         num.mul(_non_residue);

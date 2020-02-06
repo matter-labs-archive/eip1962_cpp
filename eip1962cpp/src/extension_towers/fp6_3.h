@@ -55,7 +55,7 @@ public:
         }
     }
 
-    FieldExtension3over2(Fp2<N> _non_residue, FieldExtension2<N> const &field, FrobeniusPrecomputation<FieldExtension2<N>, Fp2<N>, N, 6, 2> const &frobenius_precomputation, bool needs_frobenius) : FieldExtension2<N>(field), _non_residue(_non_residue), frobenius_coeffs_c1({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)}), frobenius_coeffs_c2({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)})
+    FieldExtension3over2(Fp2<N> _non_residue, FieldExtension2<N> const &field, FrobeniusPrecomputation_2<FieldExtension2<N>, Fp2<N>, N, 6> const &frobenius_precomputation, bool needs_frobenius) : FieldExtension2<N>(field), _non_residue(_non_residue), frobenius_coeffs_c1({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)}), frobenius_coeffs_c2({Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field), Fp2<N>::zero(field)})
     {
         if (needs_frobenius) {
             assert(frobenius_precomputation != null);
