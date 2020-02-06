@@ -71,7 +71,7 @@ public:
         }
 
         auto res = ores.value();
-        std::cout << "Miller loop result " << res << std::endl;
+        
         return final_exponentiation(res);
     }
 
