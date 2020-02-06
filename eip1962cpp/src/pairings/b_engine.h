@@ -40,7 +40,7 @@ public:
 protected:
     virtual Fp12<N> miller_loop(std::vector<std::tuple<CurvePoint<Fp<N>>, CurvePoint<Fp2<N>>>> const &points, FieldExtension2over3over2<N> const &context) const = 0;
 
-    virtual std::vector<ThreePoint<N>> prepare(CurvePoint<Fp2<N>> const &twist_point, FieldExtension2over3over2<N> const &context) const = 0;
+    virtual std::vector<ThreePoint<N>> prepare(CurvePoint<Fp2<N>> const &twist_point, FieldExtension2over3over2<N> const &context, Fp<N> const &two_inv) const = 0;
 
     virtual std::optional<Fp12<N>> final_exponentiation(Fp12<N> const &f) const = 0;
 

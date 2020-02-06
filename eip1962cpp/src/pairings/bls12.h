@@ -27,13 +27,17 @@ protected:
         std::vector<CurvePoint<Fp<N>>> g1_references;
         std::vector<std::vector<ThreePoint<N>>> prepared_coeffs;
 
+        auto two_inv_ = Fp<N>::one(context);
+        two_inv_.mul2();
+        auto const two_inv = two_inv_.inverse().value();
+
         for (auto it = points.cbegin(); it != points.cend(); it++)
         {
             auto const p = std::get<0>(*it);
             auto const q = std::get<1>(*it);
             if (!p.is_zero() && !q.is_zero())
             {
-                auto coeffs = prepare(q, context);
+                auto coeffs = prepare(q, context, two_inv_);
                 prepared_coeffs.push_back(coeffs);
                 g1_references.push_back(p);
             }
@@ -68,13 +72,9 @@ protected:
         return f;
     }
 
-    std::vector<ThreePoint<N>> prepare(CurvePoint<Fp2<N>> const &twist_point, FieldExtension2over3over2<N> const &context) const
+    std::vector<ThreePoint<N>> prepare(CurvePoint<Fp2<N>> const &twist_point, FieldExtension2over3over2<N> const &context, Fp<N> const &two_inv) const
     {
         assert(twist_point.is_normalized());
-
-        auto two_inv_ = Fp<N>::one(context);
-        two_inv_.mul2();
-        auto const two_inv = two_inv_.inverse().value();
 
         std::vector<ThreePoint<N>> ell_coeffs;
 

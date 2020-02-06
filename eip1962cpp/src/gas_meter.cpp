@@ -738,12 +738,14 @@ u64 calculate_mnt_metering(MntCurveData<EXT> curve_data, const std::string &mode
     );
 
     u64 g1_discount = checked_mul(num_g1_sugroup_discounts, g1_per_point_discount);
+    g1_discount /= 2;
 
     u64 g2_per_point_discount = calculate_multiplication_metering<MARKER_G2_MUL>(
         curve_data.modulus_limbs, curve_data.group_order_limbs, false, g2_mul_model
     );
 
     u64 g2_discount = checked_mul(num_g2_sugroup_discounts, g2_per_point_discount);
+    g2_discount /= 2;
 
     final_result = checked_sub(final_result, g1_discount);
     final_result = checked_sub(final_result, g2_discount);
@@ -905,12 +907,14 @@ u64 perform_bls12_metering(u8 mod_byte_len, Deserializer deserializer) {
     );
 
     u64 g1_discount = checked_mul(num_g1_sugroup_discounts, g1_per_point_discount);
+    g1_discount /= 2;
 
     u64 g2_per_point_discount = calculate_multiplication_metering<G2MultiplicationModelExt2Marker>(
         data.modulus_limbs, data.group_order_limbs, false, models_g2_multiplication_ext2_string
     );
 
     u64 g2_discount = checked_mul(num_g2_sugroup_discounts, g2_per_point_discount);
+    g2_discount /= 2;
 
     final_result = checked_sub(final_result, g1_discount);
     final_result = checked_sub(final_result, g2_discount);
@@ -983,12 +987,14 @@ u64 perform_bn_metering(u8 mod_byte_len, Deserializer deserializer) {
     );
 
     u64 g1_discount = checked_mul(num_g1_sugroup_discounts, g1_per_point_discount);
+    g1_discount /= 2;
 
     u64 g2_per_point_discount = calculate_multiplication_metering<G2MultiplicationModelExt2Marker>(
         data.modulus_limbs, data.group_order_limbs, false, models_g2_multiplication_ext2_string
     );
 
     u64 g2_discount = checked_mul(num_g2_sugroup_discounts, g2_per_point_discount);
+    g2_discount /= 2;
 
     final_result = checked_sub(final_result, g1_discount);
     final_result = checked_sub(final_result, g2_discount);
